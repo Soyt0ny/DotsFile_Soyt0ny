@@ -280,6 +280,19 @@ zsh_post_setup() {
     return
   fi
 
+  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+    if [[ "$MODE" == "dry-run" ]]; then
+      log_info "dry-run: Installing Oh My Zsh"
+      log_info "dry-run: sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended --keep-zshrc"
+    else
+      log_info "Installing Oh My Zsh..."
+      # Install oh-my-zsh unattended and keep our symlinked .zshrc
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
+    fi
+  else
+    log_success "Oh My Zsh is already installed"
+  fi
+
   if [[ "$SHELL" == "$zsh_path" ]] || grep -q "^$USER:.*:$zsh_path$" /etc/passwd; then
     log_success "User '$USER' already uses zsh as default shell"
   else

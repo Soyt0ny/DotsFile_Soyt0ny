@@ -1,0 +1,16 @@
+atuin
+bat
+carapace
+eza
+fastfetch
+fd
+fzf
+gh
+git-delta
+lazydocker
+lazygit
+neovim
+ripgrep
+romkatv/powerlevel10k/powerlevel10k
+starship
+zoxide
