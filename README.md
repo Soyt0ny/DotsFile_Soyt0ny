@@ -34,6 +34,7 @@ threeDotsFiles/
 |   `-- aur.txt
 |-- scripts/
 |   |-- checks.sh
+|   |-- packages.sh
 |   |-- backup.sh
 |   |-- link.sh
 |   `-- sync-excludes.txt
@@ -47,23 +48,23 @@ threeDotsFiles/
 Proposito por carpeta:
 
 - `configs/`: fuente versionada de configuraciones portables.
-- `packages/`: listas declarativas de paquetes a instalar manualmente.
+- `packages/`: listas declarativas de paquetes para instalacion automatica (pacman primero, AUR fallback).
 - `scripts/`: bloques reutilizables usados por `install.sh` y `sync.sh`.
 
 ## Requisitos
 
 - Sistema basado en Arch Linux.
 - `pacman` (obligatorio).
-- `yay` (opcional, solo para AUR).
+- `yay` (opcional, el script lo bootstrapea automaticamente si hay AUR y falta).
 - `git`.
 - Recomendado: `rsync` para sincronizacion mas precisa en `sync.sh`.
 
 ## Que instala/configura exactamente
 
-Paquetes (guiado, no instalacion automatica):
+Paquetes (instalacion automatica solo con `--apply`):
 
-- Oficiales de Arch desde `packages/official.txt`.
-- AUR desde `packages/aur.txt`.
+- Oficiales de Arch desde `packages/official.txt` usando `pacman`.
+- AUR desde `packages/aur.txt` usando `yay` (con bootstrap automatico de `yay-bin` si falta en modo `--apply`).
 
 Configuraciones por symlink:
 
@@ -72,7 +73,18 @@ Configuraciones por symlink:
 - `configs/nvim/` -> `~/.config/nvim`
 - `configs/opencode/` -> `~/.config/opencode`
 
-Importante: hoy `install.sh` muestra comandos sugeridos para paquetes, pero no ejecuta `pacman` ni `yay` automaticamente.
+Estrategia de paquetes:
+
+- Prioridad absoluta a `pacman` para todo paquete disponible en repos oficiales.
+- `yay` queda reservado para paquetes que realmente son AUR-only.
+- Si hay paquetes AUR declarados y `yay` no existe, `install.sh --apply` intenta bootstrap (`base-devel` + `git` + `yay-bin` con `makepkg -si --noconfirm`).
+- Si ese bootstrap falla, deja warning y continua con backup/link (no corta toda la ejecucion).
+
+Detalle Docker Compose (Arch):
+
+- En esta maquina, `docker` no incluye archivos `cli-plugins` de Compose.
+- El paquete oficial `docker-compose` instala tanto `/usr/bin/docker-compose` como el plugin v2 en `/usr/lib/docker/cli-plugins/docker-compose`.
+- Resultado practico: con `docker-compose` instalado, funciona `docker compose ...` (Compose v2) y tambien el comando legacy `docker-compose ...`.
 
 ## Como funciona `install.sh`
 
@@ -81,9 +93,20 @@ Modo por defecto: `dry-run` (seguro).
 Comportamiento:
 
 1. Ejecuta chequeos de entorno (`scripts/checks.sh`).
-2. Muestra guia de instalacion de paquetes segun `packages/*.txt`.
+2. Ejecuta instalacion automatica de paquetes (`scripts/packages.sh`):
+   - en `--dry-run`: muestra preview exacta de comandos.
+   - en `--apply`: instala oficiales con `sudo pacman -S --needed --noconfirm`.
+   - si hay AUR y falta `yay`, intenta bootstrap automatico de `yay-bin` (sin root para `makepkg`), y luego instala AUR con `yay -S --needed --noconfirm`.
 3. Ejecuta backup de objetivos existentes (`scripts/backup.sh`).
 4. Linkea configs por symlink (`scripts/link.sh`).
+5. Ejecuta siempre post-setup Docker.
+
+Post-instalacion Docker:
+
+- Si hay `systemctl`: habilita y arranca Docker en boot (`sudo systemctl enable --now docker`).
+- Si no hay systemd/systemctl: muestra warning y continua sin cortar la instalacion.
+- Agregar usuario al grupo `docker` solo si aun no pertenece: `sudo usermod -aG docker "$USER"`
+- Luego cerrar sesion y volver a entrar (o `newgrp docker`) para aplicar grupo.
 
 Uso:
 
@@ -159,9 +182,9 @@ Cosas que no se versionan:
 1. Clonar repo.
 2. Entrar al directorio.
 3. Revisar listas en `packages/official.txt` y `packages/aur.txt`.
-4. Instalar paquetes manualmente con `pacman`/`yay`.
-5. Ejecutar `./install.sh` (dry-run).
-6. Verificar salida y luego `./install.sh --apply`.
+4. Ejecutar `./install.sh` (dry-run) para previsualizar.
+5. Verificar salida y luego `./install.sh --apply` para instalar + backup + link.
+6. En `--apply`, el script tambien ejecuta post-setup Docker automaticamente.
 7. Abrir `zsh`, `tmux`, `nvim` y validar que los symlinks quedaron bien.
 
 ## Mantenimiento
@@ -182,7 +205,8 @@ Cosas que no se versionan:
 - `pacman` no encontrado:
   - estas fuera de Arch-family o falta el binario en PATH.
 - `yay` no encontrado:
-  - es opcional; solo afecta instalacion de paquetes AUR.
+  - en `--apply`, el script intenta bootstrap automatico de `yay-bin`.
+  - si falla bootstrap, muestra warning y deja pendientes los AUR.
 - `sync.sh` no detecta cambios esperados:
   - correr con `--verbose`.
   - verificar si el archivo quedo excluido por seguridad.
