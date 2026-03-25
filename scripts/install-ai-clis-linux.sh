@@ -96,14 +96,18 @@ load_nvm() {
   fi
 
   # shellcheck disable=SC1090
+  set +u
   source "$NVM_DIR/nvm.sh"
+  set -u
 }
 
 ensure_node_lts() {
   log_step "Instalando/actualizando Node LTS con nvm"
+  set +u
   nvm install --lts --latest-npm
   nvm alias default 'lts/*' >/dev/null
   nvm use --lts >/dev/null
+  set -u
   log_success "Node LTS listo: $(node --version)"
 }
 
@@ -143,7 +147,11 @@ show_status() {
   log_step "Estado final de binarios"
 
   if command -v nvm >/dev/null 2>&1; then
-    log_success "nvm: $(nvm --version 2>/dev/null || printf 'disponible como shell function')"
+    set +u
+    local nvm_ver
+    nvm_ver=$(nvm --version 2>/dev/null || printf 'disponible como shell function')
+    set -u
+    log_success "nvm: $nvm_ver"
   elif [[ -s "$NVM_DIR/nvm.sh" ]]; then
     log_success "nvm: disponible en $NVM_DIR"
   else
