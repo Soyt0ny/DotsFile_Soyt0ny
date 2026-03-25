@@ -16,4 +16,3 @@ starship
 zoxide
 zsh-autosuggestions
 zsh-syntax-highlighting
-marlonrichert/zsh-autocomplete/zsh-autocomplete
