@@ -14,10 +14,10 @@ ENABLE_LOG=false
 UPDATE_MODE=false
 
 declare -a ALL_MODULES=(
-  "system"
   "devtools"
-  "ai-clis"
   "project"
+  "ai-clis"
+  "system"
 )
 
 declare -a SELECTED_MODULES=()
@@ -46,7 +46,7 @@ Flags:
   -h, --help                Muestra ayuda
 
 Modulos disponibles:
-  system, devtools, ai-clis, project
+  devtools, project, ai-clis, system
 EOF
 }
 
