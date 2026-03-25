@@ -89,9 +89,15 @@ WM_VAR="/$TMUX"
 WM_CMD="tmux"
 # change with zellij
 
-function start_if_needed() {
+function if command -v tmux &> /dev/null; then
+    start_if_needed
+fi() {
     if [[ $- == *i* ]] && [[ -z "${WM_VAR#/}" ]] && [[ -t 1 ]]; then
-        exec $WM_CMD
+        if command -v $WM_CMD >/dev/null 2>&1; then
+            exec $WM_CMD
+        else
+            echo "Warning: $WM_CMD is not installed. Skipping auto-start."
+        fi
     fi
 }
 
@@ -133,15 +139,25 @@ plugins=(
   command-not-found
 )
 
-source $ZSH/oh-my-zsh.sh
+if [[ -f "$ZSH/oh-my-zsh.sh" ]]; then
+    source "$ZSH/oh-my-zsh.sh"
+fi
 
 export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
 zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
-source <(carapace _carapace)
+if command -v carapace >/dev/null 2>&1; then
+    source <(carapace _carapace)
+fi
 
-eval "$(fzf --zsh)"
-eval "$(zoxide init zsh)"
-eval "$(atuin init zsh)"
+if command -v fzf >/dev/null 2>&1; then
+    eval "$(fzf --zsh)"
+fi
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi
+if command -v atuin >/dev/null 2>&1; then
+    eval "$(atuin init zsh)"
+fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -173,4 +189,6 @@ function cpprun() {
 }
 alias cpp='cpprun'
 
-start_if_needed
+if command -v tmux &> /dev/null; then
+    start_if_needed
+fi
