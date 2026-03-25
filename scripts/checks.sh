@@ -20,12 +20,22 @@ check_cmd() {
 }
 
 log_step "Environment checks"
-check_cmd pacman "pacman (required for Arch-family)"
+source "$SCRIPT_DIR/os-detect.sh"
+CURRENT_OS="$(detect_os)"
 
-if command -v yay >/dev/null 2>&1; then
-  log_success "yay (AUR helper) found: $(command -v yay)"
+if [[ "$CURRENT_OS" == "arch" ]]; then
+  check_cmd pacman "pacman (required for Arch-family)"
+  
+  if command -v yay >/dev/null 2>&1; then
+    log_success "yay (AUR helper) found: $(command -v yay)"
+  else
+    log_info "yay not found (optional, needed for AUR packages only)"
+  fi
+elif [[ "$CURRENT_OS" == "debian" ]]; then
+  check_cmd apt-get "apt-get (required for Debian/Ubuntu)"
 else
-  log_info "yay not found (optional, needed for AUR packages only)"
+  log_error "Unsupported OS. Only Arch and Debian/Ubuntu are supported."
+  status=1
 fi
 
 if [[ "$status" -ne 0 ]]; then

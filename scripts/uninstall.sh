@@ -182,13 +182,14 @@ Razones:
 - Mejor manejar paquetes manualmente segun necesidad
 
 Para ver paquetes instalados por este setup, revisa:
-  - packages/layers/toolchains-official.txt
-  - packages/layers/ai-clis-official.txt
+  - packages/layers/arch-toolchains-official.txt
+  - packages/layers/debian-toolchains-official.txt
   - packages/layers/*-aur.txt
 
 Puedes desinstalar manualmente con:
-  sudo pacman -R <paquete>      # paquetes oficiales
-  yay -R <paquete>              # paquetes AUR
+  sudo pacman -R <paquete>      # paquetes oficiales en Arch
+  yay -R <paquete>              # paquetes AUR en Arch
+  sudo apt-get remove <paquete> # paquetes en Debian/Ubuntu
 INFO
 
 printf '\n'

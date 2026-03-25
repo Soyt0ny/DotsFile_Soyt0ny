@@ -268,8 +268,29 @@ docker_post_setup() {
   log_info "Group membership changes require re-login (or run: newgrp docker)"
 }
 
+zsh_post_setup() {
+  printf '\n'
+  log_step "Zsh post-setup"
+
+  local zsh_path
+  if command -v zsh >/dev/null 2>&1; then
+    zsh_path=$(command -v zsh)
+  else
+    log_warn "zsh not found; skipping zsh shell setup"
+    return
+  fi
+
+  if [[ "$SHELL" == "$zsh_path" ]] || grep -q "^$USER:.*:$zsh_path$" /etc/passwd; then
+    log_success "User '$USER' already uses zsh as default shell"
+  else
+    run_or_preview "Setting '$USER' default shell to zsh" sudo usermod -s "$zsh_path" "$USER"
+    log_info "Shell change requires re-login to take effect fully"
+  fi
+}
+
 if has_layer "post-setup"; then
   docker_post_setup
+  zsh_post_setup
 else
   log_info "Skipping post-setup layer"
 fi

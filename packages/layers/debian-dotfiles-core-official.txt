@@ -1,0 +1,2 @@
+# dotfiles-core has no package manifest yet.
+# This layer links versioned configs only.

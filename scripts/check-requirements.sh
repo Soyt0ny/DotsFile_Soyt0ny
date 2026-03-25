@@ -9,37 +9,46 @@ printf '\n'
 
 EXIT_CODE=0
 
-# 1. Verificar que es Arch Linux
+# 1. Verificar que es un OS soportado
 log_info "Verificando sistema operativo..."
-if [[ ! -f /etc/os-release ]]; then
-  log_error "No se encontro /etc/os-release"
+source "$ROOT_DIR/scripts/os-detect.sh"
+CURRENT_OS="$(detect_os)"
+
+if [[ "$CURRENT_OS" == "unknown" ]]; then
+  log_error "Este setup requiere Arch Linux o Debian/Ubuntu"
+  if [[ -f /etc/os-release ]]; then
+    log_info "Sistema actual: $(grep '^NAME=' /etc/os-release | cut -d= -f2 | tr -d '"')"
+  fi
   EXIT_CODE=1
 else
-  if grep -qi "arch" /etc/os-release; then
-    log_success "Sistema operativo: Arch Linux"
+  log_success "Sistema operativo detectado: $CURRENT_OS"
+fi
+
+# 2. Verificar gestor de paquetes
+log_info "Verificando gestor de paquetes..."
+if [[ "$CURRENT_OS" == "arch" ]]; then
+  if command -v pacman >/dev/null 2>&1; then
+    log_success "pacman disponible: $(command -v pacman)"
   else
-    log_error "Este setup requiere Arch Linux"
-    log_info "Sistema actual: $(grep '^NAME=' /etc/os-release | cut -d= -f2 | tr -d '"')"
+    log_error "pacman no encontrado (requerido para Arch Linux)"
     EXIT_CODE=1
   fi
-fi
-
-# 2. Verificar que existe pacman
-log_info "Verificando gestor de paquetes..."
-if command -v pacman >/dev/null 2>&1; then
-  log_success "pacman disponible: $(command -v pacman)"
-else
-  log_error "pacman no encontrado (requerido para Arch Linux)"
-  EXIT_CODE=1
-fi
-
-# 3. Verificar yay (AUR helper)
-log_info "Verificando AUR helper..."
-if command -v yay >/dev/null 2>&1; then
-  log_success "yay disponible: $(command -v yay)"
-else
-  log_warn "yay no encontrado - se instalara automaticamente durante el setup"
-  log_info "Requisitos para instalar yay: base-devel, git"
+  
+  # 3. Verificar yay (AUR helper)
+  log_info "Verificando AUR helper..."
+  if command -v yay >/dev/null 2>&1; then
+    log_success "yay disponible: $(command -v yay)"
+  else
+    log_warn "yay no encontrado - se instalara automaticamente durante el setup"
+    log_info "Requisitos para instalar yay: base-devel, git"
+  fi
+elif [[ "$CURRENT_OS" == "debian" ]]; then
+  if command -v apt-get >/dev/null 2>&1; then
+    log_success "apt-get disponible: $(command -v apt-get)"
+  else
+    log_error "apt-get no encontrado (requerido para Debian/Ubuntu)"
+    EXIT_CODE=1
+  fi
 fi
 
 # 4. Verificar conexion a internet

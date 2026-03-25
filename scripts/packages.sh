@@ -3,11 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/os-detect.sh"
+source "$ROOT_DIR/scripts/brew.sh"
+
 MODE="dry-run"
 LAYERS=""
 YAY_BOOTSTRAP_TMP=""
 AUTO_YES=false
 INCREMENTAL=false
+CURRENT_OS="$(detect_os)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,13 +38,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-official_file_legacy="$ROOT_DIR/packages/official.txt"
-aur_file_legacy="$ROOT_DIR/packages/aur.txt"
+if [[ "$CURRENT_OS" == "unknown" ]]; then
+  log_error "Unsupported or unknown OS. This setup only supports Arch and Debian/Ubuntu derivatives."
+  exit 1
+fi
+
+official_file_legacy="$ROOT_DIR/packages/${CURRENT_OS}-official.txt"
+aur_file_legacy="$ROOT_DIR/packages/${CURRENT_OS}-aur.txt"
+brew_file_legacy="$ROOT_DIR/packages/${CURRENT_OS}-brew.txt"
 
 read_packages() {
   local file="$1"
   local -n out_ref="$2"
   out_ref=()
+
+  [[ -f "$file" ]] || return 0
 
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%%#*}"
@@ -85,6 +97,7 @@ collect_packages_by_layers() {
   local -a requested_layers=()
   local -a all_official=()
   local -a all_aur=()
+  local -a all_brew=()
 
   IFS=',' read -r -a requested_layers <<<"$csv"
 
@@ -92,12 +105,20 @@ collect_packages_by_layers() {
     layer="${layer//[[:space:]]/}"
     [[ -z "$layer" ]] && continue
 
-    append_packages_from_file "$ROOT_DIR/packages/layers/${layer}-official.txt" all_official
-    append_packages_from_file "$ROOT_DIR/packages/layers/${layer}-aur.txt" all_aur
+    append_packages_from_file "$ROOT_DIR/packages/layers/${CURRENT_OS}-${layer}-official.txt" all_official
+    if [[ "$CURRENT_OS" == "arch" ]]; then
+      append_packages_from_file "$ROOT_DIR/packages/layers/${CURRENT_OS}-${layer}-aur.txt" all_aur
+    elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+      append_packages_from_file "$ROOT_DIR/packages/layers/${CURRENT_OS}-${layer}-brew.txt" all_brew
+    fi
   done
 
   dedupe_packages all_official official_packages
-  dedupe_packages all_aur aur_packages
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    dedupe_packages all_aur aur_packages
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    dedupe_packages all_brew brew_packages
+  fi
 }
 
 run_or_preview() {
@@ -122,6 +143,10 @@ cleanup_bootstrap_tmp() {
 }
 
 bootstrap_yay() {
+  if [[ "$CURRENT_OS" != "arch" ]]; then
+    return 0
+  fi
+
   if command -v yay >/dev/null 2>&1; then
     log_success "yay already available: $(command -v yay)"
     return 0
@@ -178,87 +203,153 @@ shopt -s extglob
 
 declare -a official_packages=()
 declare -a aur_packages=()
+declare -a brew_packages=()
 
 if [[ -n "$LAYERS" ]]; then
   collect_packages_by_layers "$LAYERS"
 else
   read_packages "$official_file_legacy" official_packages
-  read_packages "$aur_file_legacy" aur_packages
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    read_packages "$aur_file_legacy" aur_packages
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    read_packages "$brew_file_legacy" brew_packages
+  fi
 fi
 
 printf '\n'
 log_step "Package phase ($MODE)"
 log_info "Auto-confirm: $AUTO_YES"
 log_info "Incremental: $INCREMENTAL"
+log_info "Detected OS: $CURRENT_OS"
 if [[ -n "$LAYERS" ]]; then
   log_info "Layer package manifests: $LAYERS"
 else
   log_info "Official list: $official_file_legacy"
-  log_info "AUR list:      $aur_file_legacy"
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    log_info "AUR list:      $aur_file_legacy"
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    log_info "Brew list:     $brew_file_legacy"
+  fi
 fi
 
 # Filter packages if incremental mode
 if [[ "$INCREMENTAL" == true ]]; then
   declare -a missing_official=()
   declare -a missing_aur=()
+  declare -a missing_brew=()
   
   log_info "Modo incremental: verificando paquetes ya instalados..."
   
-  # Check official packages
   for pkg in "${official_packages[@]}"; do
-    if pacman -Q "$pkg" >/dev/null 2>&1; then
-      : # Already installed
-    else
-      missing_official+=("$pkg")
+    if [[ "$CURRENT_OS" == "arch" ]]; then
+      if pacman -Q "$pkg" >/dev/null 2>&1; then
+        : # Already installed
+      else
+        missing_official+=("$pkg")
+      fi
+    elif [[ "$CURRENT_OS" == "debian" ]]; then
+      if dpkg -l "$pkg" >/dev/null 2>&1; then
+        : # Already installed
+      else
+        missing_official+=("$pkg")
+      fi
     fi
   done
   
-  # Check AUR packages
-  for pkg in "${aur_packages[@]}"; do
-    if pacman -Q "$pkg" >/dev/null 2>&1; then
-      : # Already installed
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    for pkg in "${aur_packages[@]}"; do
+      if pacman -Q "$pkg" >/dev/null 2>&1; then
+        : # Already installed
+      else
+        missing_aur+=("$pkg")
+      fi
+    done
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    if command -v brew >/dev/null 2>&1; then
+      for pkg in "${brew_packages[@]}"; do
+        if brew list "$pkg" >/dev/null 2>&1; then
+          : # Already installed
+        else
+          missing_brew+=("$pkg")
+        fi
+      done
     else
-      missing_aur+=("$pkg")
+      missing_brew=("${brew_packages[@]}")
     fi
-  done
+  fi
   
   installed_official=$((${#official_packages[@]} - ${#missing_official[@]}))
-  installed_aur=$((${#aur_packages[@]} - ${#missing_aur[@]}))
-  
   log_info "Paquetes oficiales ya instalados: $installed_official"
   log_info "Paquetes oficiales faltantes: ${#missing_official[@]}"
-  log_info "Paquetes AUR ya instalados: $installed_aur"
-  log_info "Paquetes AUR faltantes: ${#missing_aur[@]}"
+  
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    installed_aur=$((${#aur_packages[@]} - ${#missing_aur[@]}))
+    log_info "Paquetes AUR ya instalados: $installed_aur"
+    log_info "Paquetes AUR faltantes: ${#missing_aur[@]}"
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    installed_brew=$((${#brew_packages[@]} - ${#missing_brew[@]}))
+    log_info "Paquetes Brew ya instalados: $installed_brew"
+    log_info "Paquetes Brew faltantes: ${#missing_brew[@]}"
+  fi
   
   official_packages=("${missing_official[@]}")
-  aur_packages=("${missing_aur[@]}")
+  if [[ "$CURRENT_OS" == "arch" ]]; then
+    aur_packages=("${missing_aur[@]}")
+  elif [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+    brew_packages=("${missing_brew[@]}")
+  fi
 fi
 
 if ((${#official_packages[@]} > 0)); then
   log_info "Official packages (${#official_packages[@]}): ${official_packages[*]}"
-  run_or_preview "Installing official packages with pacman" \
-    sudo pacman -S --needed --noconfirm "${official_packages[@]}"
+  run_or_preview "Installing official packages with OS package manager" \
+    sys_install "${official_packages[@]}"
 else
   log_info "No official packages declared"
 fi
 
-if ((${#aur_packages[@]} == 0)); then
-  log_info "No AUR packages declared"
-  exit 0
-fi
-
-if ! command -v yay >/dev/null 2>&1; then
-  if ! bootstrap_yay; then
-    log_warn "Pending AUR packages: ${aur_packages[*]}"
+if [[ "$CURRENT_OS" == "arch" ]]; then
+  if ((${#aur_packages[@]} == 0)); then
+    log_info "No AUR packages declared"
     exit 0
+  fi
+
+  if ! command -v yay >/dev/null 2>&1; then
+    if ! bootstrap_yay; then
+      log_warn "Pending AUR packages: ${aur_packages[*]}"
+      exit 0
+    fi
+  fi
+
+  if command -v yay >/dev/null 2>&1; then
+    log_info "AUR packages (${#aur_packages[@]}): ${aur_packages[*]}"
+    run_or_preview "Installing AUR packages with yay" \
+      yay -S --needed --noconfirm "${aur_packages[@]}"
+  else
+    log_warn "AUR packages requested but yay is still unavailable"
+    log_warn "Pending AUR packages: ${aur_packages[*]}"
   fi
 fi
 
-if command -v yay >/dev/null 2>&1; then
-  log_info "AUR packages (${#aur_packages[@]}): ${aur_packages[*]}"
-  run_or_preview "Installing AUR packages with yay" \
-    yay -S --needed --noconfirm "${aur_packages[@]}"
-else
-  log_warn "AUR packages requested but yay is still unavailable"
-  log_warn "Pending AUR packages: ${aur_packages[*]}"
+if [[ "$CURRENT_OS" == "debian" || "$CURRENT_OS" == "ubuntu" ]]; then
+  if ((${#brew_packages[@]} == 0)); then
+    log_info "No Brew packages declared"
+    exit 0
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    if ! bootstrap_brew; then
+      log_warn "Pending Brew packages: ${brew_packages[*]}"
+      exit 0
+    fi
+  fi
+
+  if command -v brew >/dev/null 2>&1; then
+    log_info "Brew packages (${#brew_packages[@]}): ${brew_packages[*]}"
+    run_or_preview "Installing Brew packages with Homebrew" \
+      brew install "${brew_packages[@]}"
+  else
+    log_warn "Brew packages requested but brew is still unavailable"
+    log_warn "Pending Brew packages: ${brew_packages[*]}"
+  fi
 fi
