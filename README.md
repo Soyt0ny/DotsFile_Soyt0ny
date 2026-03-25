@@ -159,6 +159,29 @@ Advertencia sobre `--prune`:
 4. `./sync.sh --apply`
 5. Revisar de nuevo `git diff` y recien ahi commit.
 
+## Salida coloreada en scripts
+
+Los scripts (`install.sh`, `sync.sh` y `scripts/*.sh`) usan una capa de logging consistente con etiquetas:
+
+- `info` en azul.
+- `ok` (success) en verde.
+- `warn` en amarillo.
+- `error` en rojo.
+- `step` en cian para hitos de ejecucion.
+
+Semantica y compatibilidad:
+
+- En terminal interactiva (TTY), la salida usa colores ANSI para hacer mas clara la ejecucion.
+- Si `NO_COLOR` esta seteada, o la salida no es TTY (por ejemplo CI, pipes o logs), los scripts desactivan color automaticamente.
+- Los mensajes mantienen el mismo formato base (`[info]`, `[ok]`, `[warn]`, etc.), por lo que siguen siendo legibles en logs sin escapes rotos.
+
+Ejemplos:
+
+```bash
+NO_COLOR=1 ./install.sh --dry-run
+./sync.sh --apply --verbose | tee sync.log
+```
+
 ## Seguridad
 
 Este repo esta pensado para ser publico. Regla base: **no subir secretos**.

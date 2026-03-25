@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/logging.sh"
+
 status=0
 
 check_cmd() {
@@ -9,25 +12,25 @@ check_cmd() {
   if command -v "$cmd" >/dev/null 2>&1; then
     local path
     path="$(command -v "$cmd")"
-    echo "[ok] $label found: $path"
+    log_success "$label found: $path"
   else
-    echo "[warn] $label missing"
+    log_warn "$label missing"
     status=1
   fi
 }
 
-echo "== Environment checks =="
+log_step "Environment checks"
 check_cmd pacman "pacman (required for Arch-family)"
 
 if command -v yay >/dev/null 2>&1; then
-  echo "[ok] yay (AUR helper) found: $(command -v yay)"
+  log_success "yay (AUR helper) found: $(command -v yay)"
 else
-  echo "[info] yay not found (optional, needed for AUR packages only)"
+  log_info "yay not found (optional, needed for AUR packages only)"
 fi
 
 if [[ "$status" -ne 0 ]]; then
-  echo "[error] Required tooling missing. Fix prerequisites before --apply."
+  log_error "Required tooling missing. Fix prerequisites before --apply."
   exit "$status"
 fi
 
-echo "Checks complete."
+log_success "Checks complete."

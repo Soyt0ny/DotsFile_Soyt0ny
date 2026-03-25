@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$ROOT_DIR/scripts/logging.sh"
 EXCLUDES_FILE="$ROOT_DIR/scripts/sync-excludes.txt"
 
 MODE="dry-run"
@@ -37,7 +38,7 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "[error] Unknown option: $arg"
+      log_error "Unknown option: $arg"
       usage
       exit 1
       ;;
@@ -45,7 +46,7 @@ for arg in "$@"; do
 done
 
 if [[ ! -f "$EXCLUDES_FILE" ]]; then
-  echo "[error] Missing excludes file: $EXCLUDES_FILE"
+  log_error "Missing excludes file: $EXCLUDES_FILE"
   exit 1
 fi
 
@@ -61,7 +62,22 @@ declare -a MAPPINGS=(
 )
 
 log() {
-  printf '%s\n' "$*"
+  local msg="$*"
+  if [[ "$msg" == \[*\]* ]]; then
+    local tag="${msg%%]*}"
+    tag="${tag#[}"
+    local body="${msg#*] }"
+    case "$tag" in
+      ok) log_success "$body" ;;
+      warn) log_warn "$body" ;;
+      error) log_error "$body" ;;
+      info) log_info "$body" ;;
+      plan|backup|run|dry-run|skip) log_step "$body" ;;
+      *) printf '%s\n' "$msg" ;;
+    esac
+    return
+  fi
+  printf '%s\n' "$msg"
 }
 
 vlog() {
@@ -335,7 +351,7 @@ sync_mapping() {
   fi
 }
 
-log "== Dotfiles sync (machine -> repo) =="
+log_step "Dotfiles sync (machine -> repo)"
 log "Mode: $MODE"
 log "Prune: $PRUNE"
 log "Verbose: $VERBOSE"

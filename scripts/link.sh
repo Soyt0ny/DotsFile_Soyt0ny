@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/logging.sh"
 MODE="dry-run"
 
 while [[ $# -gt 0 ]]; do
@@ -11,7 +12,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "[error] Unknown option: $1"
+      log_error "Unknown option: $1"
       exit 1
       ;;
   esac
@@ -29,21 +30,21 @@ link_one() {
   local target="$2"
 
   if [[ ! -e "$src" ]]; then
-    echo "[skip] source missing: $src"
+    log_step "source missing: $src"
     return
   fi
 
   if [[ "$MODE" == "dry-run" ]]; then
-    echo "[dry-run] ln -sfn $src $target"
+    log_info "dry-run: ln -sfn $src $target"
     return
   fi
 
   mkdir -p "$(dirname "$target")"
   ln -sfn "$src" "$target"
-  echo "[ok] linked $target -> $src"
+  log_success "linked $target -> $src"
 }
 
-echo "== Link phase ($MODE) =="
+log_step "Link phase ($MODE)"
 for item in "${mappings[@]}"; do
   src="${item%%|*}"
   target="${item#*|}"

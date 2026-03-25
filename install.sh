@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$ROOT_DIR/scripts/logging.sh"
 DRY_RUN=true
 
 usage() {
@@ -22,7 +23,7 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "[error] Unknown option: $arg"
+      log_error "Unknown option: $arg"
       usage
       exit 1
       ;;
@@ -34,9 +35,9 @@ if [[ "$DRY_RUN" == true ]]; then
   MODE="dry-run"
 fi
 
-echo "== threeDotsFiles bootstrap =="
-echo "Mode: $MODE"
-echo "Docker post-setup: always enabled"
+log_step "threeDotsFiles bootstrap"
+log_info "Mode: $MODE"
+log_info "Docker post-setup: always enabled"
 
 "$ROOT_DIR/scripts/checks.sh"
 "$ROOT_DIR/scripts/packages.sh" --mode "$MODE"
@@ -50,36 +51,36 @@ run_or_preview() {
   shift
 
   if [[ "$MODE" == "dry-run" ]]; then
-    echo "[dry-run] $label"
+    log_info "dry-run: $label"
     printf '          %q ' "$@"
     printf '\n'
     return
   fi
 
-  echo "[run] $label"
+  log_step "$label"
   "$@"
 }
 
 docker_post_setup() {
-  echo
-  echo "== Docker post-setup =="
+  printf '\n'
+  log_step "Docker post-setup"
 
   if command -v systemctl >/dev/null 2>&1; then
     run_or_preview "Enabling Docker service" sudo systemctl enable --now docker
   else
-    echo "[warn] systemctl not found; skipping docker service management"
+    log_warn "systemctl not found; skipping docker service management"
   fi
 
   if id -nG "$USER" | tr ' ' '\n' | grep -Fxq docker; then
-    echo "[ok] User '$USER' already belongs to docker group"
+    log_success "User '$USER' already belongs to docker group"
   else
     run_or_preview "Adding '$USER' to docker group" sudo usermod -aG docker "$USER"
   fi
 
-  echo "[info] Group membership changes require re-login (or run: newgrp docker)"
+  log_info "Group membership changes require re-login (or run: newgrp docker)"
 }
 
 docker_post_setup
 
-echo
-echo "Done."
+printf '\n'
+log_success "Done."

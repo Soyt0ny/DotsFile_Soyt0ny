@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/logging.sh"
 MODE="dry-run"
 
 while [[ $# -gt 0 ]]; do
@@ -11,7 +12,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "[error] Unknown option: $1"
+      log_error "Unknown option: $1"
       exit 1
       ;;
   esac
@@ -31,7 +32,7 @@ backup_target() {
   target_abs="$(readlink -f "$target" 2>/dev/null || printf '%s' "$target")"
 
   if [[ ! -e "$target" && ! -L "$target" ]]; then
-    echo "[skip] No existing target: $target"
+    log_step "No existing target: $target"
     return
   fi
 
@@ -48,16 +49,16 @@ backup_target() {
   local dest="$backup_root/$relative"
 
   if [[ "$MODE" == "dry-run" ]]; then
-    echo "[dry-run] backup $target_abs -> $dest"
+    log_info "dry-run: backup $target_abs -> $dest"
     return
   fi
 
   mkdir -p "$(dirname "$dest")"
   cp -a "$target" "$dest"
-  echo "[ok] backed up $target_abs -> $dest"
+  log_success "backed up $target_abs -> $dest"
 }
 
-echo "== Backup phase ($MODE) =="
+log_step "Backup phase ($MODE)"
 if [[ "$MODE" == "apply" ]]; then
   mkdir -p "$backup_root"
 fi
