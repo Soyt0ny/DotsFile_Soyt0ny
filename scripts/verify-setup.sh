@@ -11,7 +11,6 @@ MISSING_OPTIONAL=()
 CRITICAL_BINS=(
   "git"
   "zsh"
-  "nvim"
   "docker"
   "tmux"
 )
@@ -28,10 +27,18 @@ OPTIONAL_BINS=(
   "btop"
   "fastfetch"
   "gh"
-  "starship"
   "delta"
   "zoxide"
   "fd"
+  "nano"
+  "code"
+  "gcc"
+  "gdb"
+  "cmake"
+  "python"
+  "pnpm"
+  "bun"
+  "pyenv"
 )
 
 check_binary() {
@@ -43,9 +50,6 @@ check_binary() {
     case "$bin" in
       git)
         version=$(git --version 2>&1 | head -1)
-        ;;
-      nvim)
-        version=$(nvim --version 2>&1 | head -1)
         ;;
       docker)
         version=$(docker --version 2>&1)

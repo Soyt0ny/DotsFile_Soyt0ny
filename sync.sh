@@ -20,12 +20,16 @@ Usage:
 Sync direction is always: current machine -> repo
 
 Whitelisted mappings:
-  ~/.zshrc              -> configs/zsh/.zshrc
-  ~/.p10k.zsh           -> configs/zsh/.p10k.zsh
-  ~/.tmux.conf          -> configs/tmux/.tmux.conf
-  ~/.config/nvim/       -> configs/nvim/
-  ~/.config/ghostty/    -> configs/ghostty/
-  ~/.config/git/config  -> configs/git/.gitconfig
+  ~/.zshrc                       -> configs/zsh/.zshrc
+  ~/.p10k.zsh                    -> configs/zsh/.p10k.zsh
+  ~/.tmux.conf                   -> configs/tmux/.tmux.conf
+  ~/.config/ghostty/             -> configs/ghostty/
+  ~/.config/kitty/               -> configs/kitty/
+  ~/.config/git/config           -> configs/git/.gitconfig
+  ~/.config/atuin/               -> configs/atuin/
+  ~/.config/btop/                -> configs/btop/
+  ~/.config/fastfetch/           -> configs/fastfetch/
+  ~/.config/Code/User/settings.json -> configs/vscode/settings.json
 EOF
 }
 
@@ -60,9 +64,13 @@ declare -a MAPPINGS=(
   "$HOME/.zshrc|$ROOT_DIR/configs/zsh/.zshrc|file"
   "$HOME/.p10k.zsh|$ROOT_DIR/configs/zsh/.p10k.zsh|file"
   "$HOME/.tmux.conf|$ROOT_DIR/configs/tmux/.tmux.conf|file"
-  "$HOME/.config/nvim|$ROOT_DIR/configs/nvim|dir"
   "$HOME/.config/ghostty|$ROOT_DIR/configs/ghostty|dir"
+  "$HOME/.config/kitty|$ROOT_DIR/configs/kitty|dir"
   "$HOME/.config/git/config|$ROOT_DIR/configs/git/.gitconfig|file"
+  "$HOME/.config/atuin|$ROOT_DIR/configs/atuin|dir"
+  "$HOME/.config/btop|$ROOT_DIR/configs/btop|dir"
+  "$HOME/.config/fastfetch|$ROOT_DIR/configs/fastfetch|dir"
+  "$HOME/.config/Code/User/settings.json|$ROOT_DIR/configs/vscode/settings.json|file"
 )
 
 log() {

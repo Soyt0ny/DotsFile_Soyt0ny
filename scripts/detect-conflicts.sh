@@ -62,10 +62,13 @@ log_info "Verificando configs existentes..."
 declare -a DOTFILE_TARGETS=(
   "$HOME/.zshrc"
   "$HOME/.tmux.conf"
-  "$HOME/.config/nvim"
   "$HOME/.config/ghostty"
   "$HOME/.p10k.zsh"
   "$HOME/.config/git/config"
+  "$HOME/.config/atuin"
+  "$HOME/.config/btop"
+  "$HOME/.config/fastfetch"
+  "$HOME/.config/Code/User/settings.json"
 )
 
 EXISTING_FILES=()

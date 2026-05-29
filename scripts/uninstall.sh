@@ -47,9 +47,14 @@ printf '\n'
 declare -a DOTFILE_SYMLINKS=(
   "$HOME/.zshrc"
   "$HOME/.tmux.conf"
-  "$HOME/.config/nvim"
   "$HOME/.config/ghostty"
+  "$HOME/.config/kitty"
   "$HOME/.p10k.zsh"
+  "$HOME/.config/git/config"
+  "$HOME/.config/atuin"
+  "$HOME/.config/btop"
+  "$HOME/.config/fastfetch"
+  "$HOME/.config/Code/User/settings.json"
 )
 
 log_info "Verificando symlinks de dotfiles..."

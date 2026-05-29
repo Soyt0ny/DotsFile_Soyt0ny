@@ -28,10 +28,15 @@ backup_root="$HOME/.dotfiles-backup/$timestamp"
 
 declare -a mappings=(
   "$ROOT_DIR/configs/zsh/.zshrc|$HOME/.zshrc"
+  "$ROOT_DIR/configs/zsh/.p10k.zsh|$HOME/.p10k.zsh"
   "$ROOT_DIR/configs/tmux/.tmux.conf|$HOME/.tmux.conf"
-  "$ROOT_DIR/configs/nvim|$HOME/.config/nvim"
   "$ROOT_DIR/configs/ghostty|$HOME/.config/ghostty"
   "$ROOT_DIR/configs/kitty|$HOME/.config/kitty"
+  "$ROOT_DIR/configs/git/.gitconfig|$HOME/.config/git/config"
+  "$ROOT_DIR/configs/atuin|$HOME/.config/atuin"
+  "$ROOT_DIR/configs/btop|$HOME/.config/btop"
+  "$ROOT_DIR/configs/fastfetch|$HOME/.config/fastfetch"
+  "$ROOT_DIR/configs/vscode/settings.json|$HOME/.config/Code/User/settings.json"
 )
 
 backup_target() {
