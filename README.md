@@ -15,17 +15,29 @@ This setup automates the complete onboarding of a new machine across different L
 * **Navigation & History**: `atuin` (shell history), `zoxide` (smart cd)
 * **TUIs**: `lazygit`, `lazydocker`
 * **System Monitoring**: `btop`, `fastfetch`
-* **Dev Tools**: `github-cli`, `starship` (prompt), `shellcheck`
+* **Dev Tools**: `github-cli`, `nano` (default `$EDITOR`)
+* **Editor**: VS Code (`visual-studio-code-bin` on Arch / Microsoft repo on Debian)
+
+### Languages (optional, selectable in the interactive menu)
+* **Python**: `python`, `pip`, `pyenv`
+* **C / C++**: `gcc`, `gdb`, `make`, `cmake`, `valgrind`
+* **PHP**: `php`, `composer`
+* **Node.js**: `nvm` + `pnpm` + `bun`
 
 ### Versioned Configurations
 * **Shell**: `.zshrc` + `.p10k.zsh` (Powerlevel10k prompt)
 * **Multiplexer**: `.tmux.conf`
-* **Editor**: `nvim/` (Complete LazyVim setup)
-* **Terminal**: `kitty/` (Kanagawa theme, blur, transparency)
+* **Terminal**: `kitty/` (Kanagawa theme, blur, transparency) + `ghostty/`
+* **Tools**: `atuin/`, `btop/`, `fastfetch/`, VS Code `settings.json`
 * **Git**: `.gitconfig` (Aliases, delta, behavior - *no credentials included*)
 
 ### Optional Add-ons
-* **AI CLIs**: OpenCode, GitHub Copilot, Gemini, Codex, Claude Code
+* **AI CLIs**: Claude Code, Antigravity CLI (`agy`), OpenCode, GitHub Copilot, Codex
+
+### Interactive Install
+Running `./setup.sh` with no flags launches a **`gum`-based menu** to pick which
+languages and extras to install (the core CLI/shell/git/editor always installs).
+Use `./setup.sh --all` to install everything without the menu.
 
 ---
 

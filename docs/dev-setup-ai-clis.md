@@ -12,13 +12,16 @@ El script `scripts/install-ai-clis-linux.sh` realiza:
 2. Verificacion de requisitos minimos (`bash`, `curl`).
 3. Instalacion de `nvm` (si no existe).
 4. Instalacion de Node LTS por `nvm`.
-5. Instalacion por npm global de:
+5. Instalacion de gestores de paquetes JS: `pnpm` y `bun` (instaladores oficiales).
+6. Instalacion de `pyenv` en Debian (en Arch viene del AUR, capa `lang-python`).
+7. Instalacion por npm global de:
    - `@openai/codex`
-   - `@google/gemini-cli`
-6. Instalacion por metodos oficiales de script de:
+8. Instalacion por metodos oficiales de script de:
    - OpenCode (`https://opencode.ai/install`)
    - GitHub Copilot CLI (`https://gh.io/copilot-install`)
    - Claude Code (`https://claude.ai/install.sh`)
+   - Antigravity CLI / `agy` (`https://antigravity.google/cli/install.sh`)
+     — reemplaza a Gemini CLI, dado de baja por Google el 2026-06-18.
 
 ## Que NO hace
 
@@ -50,9 +53,11 @@ Verificacion manual opcional:
 ```bash
 codex --version
 opencode --version
-gemini --version
+agy --version
 copilot --version
 claude --version
+pnpm --version
+bun --version
 ```
 
 ## Troubleshooting basico
