@@ -94,6 +94,7 @@ resolve_layers() {
   for item in "${SELECTED_LAYERS[@]}"; do
     case "$item" in
       toolchains|dotfiles-core|ai-clis|post-setup) ;;
+      lang-python|lang-cpp|lang-php) ;;
       *)
         log_error "Unknown layer: $item"
         exit 1
@@ -177,13 +178,15 @@ esac
 
 resolve_layers
 
+# Las capas dotfiles-core (symlinks) y post-setup (acciones) no tienen manifiesto
+# de paquetes; el resto (toolchains, lang-*, ai-clis) si se instalan via packages.sh.
 PACKAGE_LAYERS=()
-if has_layer "toolchains"; then
-  PACKAGE_LAYERS+=("toolchains")
-fi
-if has_layer "ai-clis"; then
-  PACKAGE_LAYERS+=("ai-clis")
-fi
+for layer in "${SELECTED_LAYERS[@]}"; do
+  case "$layer" in
+    dotfiles-core|post-setup) ;;
+    *) PACKAGE_LAYERS+=("$layer") ;;
+  esac
+done
 
 PACKAGE_LAYERS_CSV=""
 if ((${#PACKAGE_LAYERS[@]} > 0)); then
