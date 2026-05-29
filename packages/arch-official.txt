@@ -1,10 +1,7 @@
 git
 git-delta
-duf
-dust
 composer
 php
-neovim
 lazygit
 lazydocker
 docker
@@ -15,9 +12,6 @@ fzf
 ripgrep
 eza
 btop
-tldr
-jq
-ncdu
 zsh
 zoxide
 fd

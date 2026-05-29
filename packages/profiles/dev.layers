@@ -1,4 +1,7 @@
 toolchains
+lang-python
+lang-cpp
+lang-php
 dotfiles-core
 ai-clis
 post-setup

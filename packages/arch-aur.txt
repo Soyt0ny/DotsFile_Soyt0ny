@@ -1,2 +1,2 @@
-carapace
 zsh-theme-powerlevel10k
+visual-studio-code-bin

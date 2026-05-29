@@ -1,0 +1,5 @@
+gcc
+gdb
+make
+cmake
+valgrind

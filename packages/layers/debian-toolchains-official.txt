@@ -1,11 +1,8 @@
 git
-composer
-php
 docker.io
 docker-compose-plugin
 zsh
-shellcheck
+nano
 bat
 btop
-build-essential
 kitty
