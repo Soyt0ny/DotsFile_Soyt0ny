@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/os-detect.sh"
 
 MODE="apply"
 AUTO_YES=false
@@ -37,7 +38,11 @@ case "$MODE" in
     ;;
 esac
 
-log_info "Installing base dev toolchains"
+# Capas a instalar. Por defecto: nucleo + todos los lenguajes.
+# El menu interactivo setea DOTS_DEVTOOLS_LAYERS para instalar solo lo elegido.
+DEVTOOLS_LAYERS="${DOTS_DEVTOOLS_LAYERS:-toolchains,lang-python,lang-cpp,lang-php}"
+
+log_info "Installing dev toolchains (layers: $DEVTOOLS_LAYERS)"
 
 declare -a install_flags=()
 if [[ "$AUTO_YES" == true ]]; then
@@ -48,7 +53,17 @@ if [[ "$SKIP_BACKUP" == true ]]; then
 fi
 
 if [[ "$MODE" == "dry-run" ]]; then
-  "$ROOT_DIR/install.sh" --dry-run --layers toolchains --incremental "${install_flags[@]}"
+  "$ROOT_DIR/install.sh" --dry-run --layers "$DEVTOOLS_LAYERS" --incremental "${install_flags[@]}"
 else
-  "$ROOT_DIR/install.sh" --apply --layers toolchains --incremental "${install_flags[@]}"
+  "$ROOT_DIR/install.sh" --apply --layers "$DEVTOOLS_LAYERS" --incremental "${install_flags[@]}"
+fi
+
+# VS Code: en Arch viene del AUR (visual-studio-code-bin, en la capa toolchains).
+# En Debian/Ubuntu no esta en apt, asi que se instala via el repo oficial de Microsoft.
+if [[ "$(detect_os)" == "debian" ]]; then
+  if [[ "$MODE" == "dry-run" ]]; then
+    log_info "dry-run: scripts/install-vscode-debian.sh"
+  else
+    "$ROOT_DIR/scripts/install-vscode-debian.sh"
+  fi
 fi

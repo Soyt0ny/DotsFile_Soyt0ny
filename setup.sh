@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/os-detect.sh"
 
 MODE="apply"
 ONLY_MODULE=""
@@ -22,11 +23,17 @@ declare -a ALL_MODULES=(
 
 declare -a SELECTED_MODULES=()
 
+# Invocacion pelada (sin flags) => ofrecer menu interactivo con gum.
+USE_MENU=false
+if [[ $# -eq 0 ]]; then
+  USE_MENU=true
+fi
+
 usage() {
   cat <<'EOF'
 Uso:
-  ./setup.sh
-  ./setup.sh --all
+  ./setup.sh                Menu interactivo (gum) para elegir lenguajes y extras
+  ./setup.sh --all          Instala todo sin menu
   ./setup.sh --dry-run
   ./setup.sh --yes
   ./setup.sh --interactive
@@ -206,6 +213,39 @@ if [[ "$UPDATE_MODE" != true ]]; then
         exit 1
       fi
     fi
+  fi
+fi
+
+# Menu interactivo (gum) en invocacion pelada
+if [[ "$USE_MENU" == true && -t 0 ]]; then
+  # gum es necesario para el menu. En una maquina nueva puede no estar todavia,
+  # asi que lo instalamos antes (en Arch viene del repo extra; en Debian via apt
+  # si el repo de Charm esta configurado, si no se omite el menu).
+  if ! command -v gum >/dev/null 2>&1 && [[ "$MODE" == "apply" ]]; then
+    log_info "Instalando gum para el menu interactivo..."
+    sys_install gum || log_warn "No se pudo instalar gum automaticamente"
+  fi
+
+  if command -v gum >/dev/null 2>&1; then
+    menu_tmp="$(mktemp)"
+    if "$ROOT_DIR/scripts/interactive-menu.sh" --out "$menu_tmp"; then
+      # shellcheck disable=SC1090
+      source "$menu_tmp"
+      rm -f "$menu_tmp"
+      IFS=',' read -r -a SELECTED_MODULES <<<"${MODULES:-}"
+      if [[ -n "${DEVTOOLS_LAYERS:-}" ]]; then
+        export DOTS_DEVTOOLS_LAYERS="$DEVTOOLS_LAYERS"
+      fi
+      if ((${#SELECTED_MODULES[@]} == 0)); then
+        log_error "El menu no devolvio modulos; abortando"
+        exit 1
+      fi
+    else
+      rm -f "$menu_tmp"
+      log_warn "Menu cancelado; usando seleccion por defecto (todo)"
+    fi
+  else
+    log_info "gum no disponible; instalando todo por defecto (sin menu)"
   fi
 fi
 

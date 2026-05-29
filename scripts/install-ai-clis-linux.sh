@@ -142,6 +142,24 @@ ensure_copilot_cli() {
   ensure_official_cli "GitHub Copilot CLI" "copilot" "https://gh.io/copilot-install"
 }
 
+ensure_pnpm() {
+  ensure_official_cli "pnpm" "pnpm" "https://get.pnpm.io/install.sh"
+}
+
+ensure_bun() {
+  ensure_official_cli "Bun" "bun" "https://bun.sh/install"
+}
+
+ensure_pyenv() {
+  # En Arch pyenv viene del AUR (ver packages/layers/arch-toolchains-aur.txt).
+  # En Debian no esta en apt/brew, asi que se instala via instalador oficial.
+  if command -v pyenv >/dev/null 2>&1; then
+    log_info "pyenv ya existe; se omite instalacion"
+    return
+  fi
+  run_installer_script "pyenv" "https://pyenv.run"
+}
+
 show_status() {
   printf '\n'
   log_step "Estado final de binarios"
@@ -182,10 +200,28 @@ show_status() {
     log_warn "opencode: no encontrado"
   fi
 
-  if command -v gemini >/dev/null 2>&1; then
-    log_success "gemini: $(gemini --version 2>/dev/null || printf 'instalado')"
+  if command -v pnpm >/dev/null 2>&1; then
+    log_success "pnpm: $(pnpm --version 2>/dev/null || printf 'instalado')"
   else
-    log_warn "gemini: no encontrado"
+    log_warn "pnpm: no encontrado"
+  fi
+
+  if command -v bun >/dev/null 2>&1; then
+    log_success "bun: $(bun --version 2>/dev/null || printf 'instalado')"
+  else
+    log_warn "bun: no encontrado"
+  fi
+
+  if command -v pyenv >/dev/null 2>&1; then
+    log_success "pyenv: $(pyenv --version 2>/dev/null || printf 'instalado')"
+  else
+    log_warn "pyenv: no encontrado"
+  fi
+
+  if command -v agy >/dev/null 2>&1; then
+    log_success "agy (Antigravity CLI): $(agy --version 2>/dev/null || printf 'instalado')"
+  else
+    log_warn "agy (Antigravity CLI): no encontrado"
   fi
 
   if command -v copilot >/dev/null 2>&1; then
@@ -212,12 +248,17 @@ main() {
   load_nvm
   ensure_node_lts
 
+  ensure_pnpm
+  ensure_bun
+  ensure_pyenv
+
   ensure_npm_global "@openai/codex" "OpenAI Codex CLI" "codex"
-  ensure_npm_global "@google/gemini-cli" "Google Gemini CLI" "gemini"
 
   ensure_official_cli "OpenCode" "opencode" "https://opencode.ai/install"
   ensure_copilot_cli
   ensure_official_cli "Claude Code" "claude" "https://claude.ai/install.sh"
+  # Antigravity CLI (agy) reemplaza a Gemini CLI, dado de baja por Google el 2026-06-18.
+  ensure_official_cli "Antigravity CLI" "agy" "https://antigravity.google/cli/install.sh"
 
   show_status
 

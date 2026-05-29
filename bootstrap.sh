@@ -14,7 +14,7 @@ if [ -f /etc/os-release ]; then
         sudo apt-get update -y
         sudo apt-get install -y git build-essential curl
     else
-        sudo pacman -Sy --needed --noconfirm git base-devel curl
+        sudo pacman -Sy --needed --noconfirm git base-devel curl gum
     fi
 else
     sudo pacman -Sy --needed --noconfirm git base-devel curl
