@@ -25,18 +25,16 @@ else
     export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.cargo/bin:$HOME/.volta/bin:$HOME/.bun/bin:$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:$HOME/.config:$HOME/.cargo/bin:/usr/local/lib/*:$PATH"
 fi
 
-# Set nvim as default editor for opencode and other tools
-export EDITOR="nvim"
-export VISUAL="nvim"
+# Default terminal editor (nvim fue removido; VS Code es el editor principal,
+# nano queda para commits/ediciones rapidas en la terminal)
+export EDITOR="nano"
+export VISUAL="nano"
 
 if [[ $- == *i* ]]; then
     # Commands to run in interactive sessions can go here
 fi
 
 export LS_COLORS="di=38;5;67:ow=48;5;60:ex=38;5;132:ln=38;5;144:*.tar=38;5;180:*.zip=38;5;180:*.jpg=38;5;175:*.png=38;5;175:*.mp3=38;5;175:*.wav=38;5;175:*.txt=38;5;223:*.sh=38;5;132"
-if [[ "$(uname)" == "Darwin" ]]; then
-else
-fi
 
 # Homebrew setup (skip on Termux)
 if [[ $IS_TERMUX -eq 0 ]]; then
@@ -70,7 +68,7 @@ if [[ $IS_TERMUX -eq 1 ]]; then
     [[ -f "$PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme" ]] && source "$PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme"
 else
     # Safe sourcing for Homebrew Zsh plugins to prevent crashes if missing
-    local BREW_SHARE="$(dirname $BREW_BIN)/share"
+    BREW_SHARE="$(dirname "$BREW_BIN")/share"
     [[ -f "$BREW_SHARE/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]] && source "$BREW_SHARE/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
     [[ -f "$BREW_SHARE/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$BREW_SHARE/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
     [[ -f "$BREW_SHARE/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$BREW_SHARE/zsh-autosuggestions/zsh-autosuggestions.zsh"
@@ -80,7 +78,7 @@ fi
 export PROJECT_PATHS="$HOME/work"
 export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
 export FZF_DEFAULT_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exlude .git"
+export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
 
 WM_VAR="/$TMUX"
 # change with ZELLIJ
@@ -97,10 +95,6 @@ plugins=(
 )
 
 source $ZSH/oh-my-zsh.sh
-
-export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
-zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
-# source <(carapace _carapace)
 
 eval "$(fzf --zsh)"
 eval "$(zoxide init zsh)"
@@ -160,8 +154,6 @@ alias gl='git log --oneline --graph --decorate'
 alias gd='git diff'
 
 # Shortcuts útiles
-alias vim='nvim'
-alias v='nvim'
 alias lg='lazygit'
 alias ld='lazydocker'
 alias c='clear'
