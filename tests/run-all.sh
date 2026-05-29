@@ -22,14 +22,14 @@ printf '\n'
 for test in "${tests[@]}"; do
   if [[ ! -f "$test" ]]; then
     echo "✗ SKIP: $test (no existe)"
-    ((failed++))
+    failed=$((failed + 1))
     continue
   fi
-  
+
   if bash "$test"; then
-    ((passed++))
+    passed=$((passed + 1))
   else
-    ((failed++))
+    failed=$((failed + 1))
   fi
   printf '\n'
 done
