@@ -2,63 +2,47 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 
 AUTO_YES=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -y|--yes)
-      AUTO_YES=true
-      shift
-      ;;
-    *)
-      log_error "Opcion desconocida: $1"
-      exit 1
-      ;;
+    -y|--yes) AUTO_YES=true; shift ;;
+    *) spinner_warn "Unknown option: $1"; exit 1 ;;
   esac
 done
 
-log_step "Pre-instalacion: detectando conflictos"
+spinner_step "Checking for conflicts"
 printf '\n'
 
 CONFLICTS_FOUND=false
 
-# Conflicto 1: Oh My Zsh
-log_info "Verificando Oh My Zsh..."
+# Oh My Zsh
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
-  log_warn "[CONFLICTO] Oh My Zsh detectado en: $HOME/.oh-my-zsh"
-  log_info "  Este setup usa zsh con powerlevel10k standalone"
-  log_info "  Puede haber conflictos con tu .zshrc existente"
+  spinner_warn "Oh My Zsh detected — may conflict with p10k standalone"
   CONFLICTS_FOUND=true
 else
-  log_success "Oh My Zsh no detectado"
+  spinner_success "Oh My Zsh: not detected"
 fi
 
-# Conflicto 2: chezmoi
-log_info "Verificando chezmoi..."
+# chezmoi
 if [[ -d "$HOME/.local/share/chezmoi" ]]; then
-  log_warn "[CONFLICTO] chezmoi detectado en: $HOME/.local/share/chezmoi"
-  log_info "  Este setup maneja dotfiles con symlinks directos"
-  log_info "  Puede haber conflictos con tu gestion actual"
+  spinner_warn "chezmoi detected — may conflict with symlink management"
   CONFLICTS_FOUND=true
 else
-  log_success "chezmoi no detectado"
+  spinner_success "chezmoi: not detected"
 fi
 
-# Conflicto 3: yadm
-log_info "Verificando yadm..."
+# yadm
 if [[ -d "$HOME/.config/yadm" ]]; then
-  log_warn "[CONFLICTO] yadm detectado en: $HOME/.config/yadm"
-  log_info "  Este setup maneja dotfiles con symlinks directos"
-  log_info "  Puede haber conflictos con tu gestion actual"
+  spinner_warn "yadm detected — may conflict with symlink management"
   CONFLICTS_FOUND=true
 else
-  log_success "yadm no detectado"
+  spinner_success "yadm: not detected"
 fi
 
-# Conflicto 4: dotfiles existentes que NO son symlinks
-log_info "Verificando configs existentes..."
+# Existing configs that are NOT symlinks
 declare -a DOTFILE_TARGETS=(
   "$HOME/.zshrc"
   "$HOME/.tmux.conf"
@@ -74,37 +58,28 @@ declare -a DOTFILE_TARGETS=(
 EXISTING_FILES=()
 for target in "${DOTFILE_TARGETS[@]}"; do
   if [[ -e "$target" && ! -L "$target" ]]; then
-    log_warn "[CONFLICTO] Archivo/directorio real existe: $target"
-    log_info "  Este setup creara symlinks a este repo"
-    log_info "  Tu archivo actual sera respaldado en ~/.dotfiles-backup/"
+    spinner_info "Existing file (will be backed up): $target"
     EXISTING_FILES+=("$target")
     CONFLICTS_FOUND=true
   fi
 done
 
-if [[ "${#EXISTING_FILES[@]}" -eq 0 ]]; then
-  log_success "No se encontraron configs existentes que puedan pisarse"
-fi
+[[ "${#EXISTING_FILES[@]}" -eq 0 ]] && spinner_success "No existing configs to overwrite"
 
 printf '\n'
 
 if [[ "$CONFLICTS_FOUND" == true ]]; then
-  log_warn "Se detectaron posibles conflictos"
-  log_info "El setup respaldara tus configs actuales en ~/.dotfiles-backup/"
-  
+  spinner_warn "Conflicts detected — existing configs will be backed up to ~/.dotfiles-backup/"
+
   if [[ "$AUTO_YES" != true ]]; then
     printf '\n'
-    read -rp "¿Continuar de todas formas? (y/N): " response
-    response=${response:-N}
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-      log_info "Setup cancelado por el usuario"
-      exit 1
-    fi
+    read -rp "  Continue anyway? (y/N): " response
+    [[ "${response:-N}" =~ ^[Yy]$ ]] || { spinner_info "Cancelled"; exit 1; }
   fi
-  
-  log_success "Continuando con el setup..."
+
+  spinner_success "Proceeding with setup"
 else
-  log_success "No se detectaron conflictos"
+  spinner_success "No conflicts detected"
 fi
 
 exit 0

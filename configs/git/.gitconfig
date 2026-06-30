@@ -27,7 +27,7 @@
 	enabled = true           # Record and reuse conflict resolutions
 	autoupdate = true        # Apply stored conflict resolutions automatically
 [core]
-	editor = nvim
+	editor = nano
 	pager = delta
 [interactive]
 	diffFilter = delta --color-only

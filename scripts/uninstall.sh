@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 
 FORCE=false
 
@@ -33,14 +33,14 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      log_error "Opcion desconocida: $1"
+      spinner_warn "Opcion desconocida: $1"
       usage
       exit 1
       ;;
   esac
 done
 
-log_step "threeDotsFiles uninstaller"
+spinner_step "threeDotsFiles uninstaller"
 printf '\n'
 
 # Dotfiles managed by this repo
@@ -57,58 +57,58 @@ declare -a DOTFILE_SYMLINKS=(
   "$HOME/.config/Code/User/settings.json"
 )
 
-log_info "Verificando symlinks de dotfiles..."
+spinner_info "Verificando symlinks de dotfiles..."
 printf '\n'
 
 FOUND_SYMLINKS=()
 for link in "${DOTFILE_SYMLINKS[@]}"; do
   if [[ -L "$link" ]]; then
     target=$(readlink -f "$link" 2>/dev/null || readlink "$link")
-    log_info "[SYMLINK] $link -> $target"
+    spinner_info "[SYMLINK] $link -> $target"
     FOUND_SYMLINKS+=("$link")
   elif [[ -e "$link" ]]; then
-    log_warn "[FILE] $link (no es symlink, NO se removera)"
+    spinner_warn "[FILE] $link (no es symlink, NO se removera)"
   else
-    log_info "[NO EXISTE] $link"
+    spinner_info "[NO EXISTE] $link"
   fi
 done
 
 if ((${#FOUND_SYMLINKS[@]} == 0)); then
   printf '\n'
-  log_success "No se encontraron symlinks de dotfiles para remover"
+  spinner_success "No se encontraron symlinks de dotfiles para remover"
   exit 0
 fi
 
 printf '\n'
-log_step "Symlinks encontrados: ${#FOUND_SYMLINKS[@]}"
+spinner_step "Symlinks encontrados: ${#FOUND_SYMLINKS[@]}"
 
 if [[ "$FORCE" != true ]]; then
   printf '\n'
   read -rp "¿Remover estos symlinks? (y/N): " response
   response=${response:-N}
   if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    log_info "Operacion cancelada"
+    spinner_info "Operacion cancelada"
     exit 0
   fi
 fi
 
 printf '\n'
-log_info "Removiendo symlinks..."
+spinner_info "Removiendo symlinks..."
 for link in "${FOUND_SYMLINKS[@]}"; do
   if rm "$link"; then
-    log_success "Removido: $link"
+    spinner_success "Removido: $link"
   else
-    log_error "Fallo al remover: $link"
+    spinner_warn "Fallo al remover: $link"
   fi
 done
 
 printf '\n'
-log_step "Restauracion de backups"
+spinner_step "Restauracion de backups"
 
 BACKUP_ROOT="$HOME/.dotfiles-backup"
 
 if [[ ! -d "$BACKUP_ROOT" ]]; then
-  log_info "No se encontraron backups en $BACKUP_ROOT"
+  spinner_info "No se encontraron backups en $BACKUP_ROOT"
 else
   # Listar backups disponibles
   declare -a available_backups=()
@@ -117,13 +117,13 @@ else
   done < <(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null | sort -zr)
   
   if [[ "${#available_backups[@]}" -eq 0 ]]; then
-    log_info "No se encontraron backups en $BACKUP_ROOT"
+    spinner_info "No se encontraron backups en $BACKUP_ROOT"
   else
     printf '\n'
-    log_info "Backups disponibles:"
+    spinner_info "Backups disponibles:"
     for backup in "${available_backups[@]}"; do
       backup_name="$(basename "$backup")"
-      log_info "  - $backup_name"
+      spinner_info "  - $backup_name"
     done
     
     # Obtener el mas reciente
@@ -136,7 +136,7 @@ else
     
     if [[ "$response" =~ ^[Yy]$ ]]; then
       printf '\n'
-      log_step "Restaurando backup: $most_recent_name"
+      spinner_step "Restaurando backup: $most_recent_name"
       
       # Restaurar cada archivo/directorio del backup
       restored_count=0
@@ -149,7 +149,7 @@ else
           dest="$HOME"
         elif [[ "$relative" == external/* ]]; then
           # External files: no restaurar automaticamente (muy peligroso)
-          log_warn "Omitiendo archivo externo: $relative"
+          spinner_warn "Omitiendo archivo externo: $relative"
           continue
         else
           dest="$HOME/$relative"
@@ -157,27 +157,27 @@ else
         
         # Copiar de vuelta
         if cp -a "$item" "$dest"; then
-          log_success "Restaurado: $dest"
+          spinner_success "Restaurado: $dest"
           ((restored_count++))
         else
-          log_error "Fallo al restaurar: $dest"
+          spinner_warn "Fallo al restaurar: $dest"
         fi
       done < <(find "$most_recent" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
       
       printf '\n'
       if [[ "$restored_count" -gt 0 ]]; then
-        log_success "Archivos restaurados: $restored_count"
+        spinner_success "Archivos restaurados: $restored_count"
       else
-        log_info "No se restauraron archivos"
+        spinner_info "No se restauraron archivos"
       fi
     else
-      log_info "Restauracion omitida"
+      spinner_info "Restauracion omitida"
     fi
   fi
 fi
 
 printf '\n'
-log_step "Informacion sobre paquetes"
+spinner_step "Informacion sobre paquetes"
 cat <<'INFO'
 Este script NO desinstala paquetes del sistema.
 
@@ -198,4 +198,4 @@ Puedes desinstalar manualmente con:
 INFO
 
 printf '\n'
-log_success "Uninstall completo"
+spinner_success "Uninstall completo"

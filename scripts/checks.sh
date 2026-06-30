@@ -2,45 +2,38 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/logging.sh"
+source "$SCRIPT_DIR/spinner.sh"
+source "$SCRIPT_DIR/os-detect.sh"
 
+CURRENT_OS="$(detect_os)"
 status=0
 
 check_cmd() {
   local cmd="$1"
   local label="$2"
   if command -v "$cmd" >/dev/null 2>&1; then
-    local path
-    path="$(command -v "$cmd")"
-    log_success "$label found: $path"
+    spinner_success "$label: $(command -v "$cmd")"
   else
-    log_warn "$label missing"
+    spinner_warn "$label: missing"
     status=1
   fi
 }
 
-log_step "Environment checks"
-source "$SCRIPT_DIR/os-detect.sh"
-CURRENT_OS="$(detect_os)"
+spinner_step "Environment checks"
 
 if [[ "$CURRENT_OS" == "arch" ]]; then
-  check_cmd pacman "pacman (required for Arch-family)"
-  
+  check_cmd pacman "pacman"
   if command -v yay >/dev/null 2>&1; then
-    log_success "yay (AUR helper) found: $(command -v yay)"
+    spinner_success "yay: $(command -v yay)"
   else
-    log_info "yay not found (optional, needed for AUR packages only)"
+    spinner_info "yay not found — optional (only for AUR)"
   fi
 elif [[ "$CURRENT_OS" == "debian" ]]; then
-  check_cmd apt-get "apt-get (required for Debian/Ubuntu)"
+  check_cmd apt-get "apt-get"
 else
-  log_error "Unsupported OS. Only Arch and Debian/Ubuntu are supported."
+  spinner_warn "Unsupported OS"
   status=1
 fi
 
-if [[ "$status" -ne 0 ]]; then
-  log_error "Required tooling missing. Fix prerequisites before --apply."
-  exit "$status"
-fi
-
-log_success "Checks complete."
+[[ "$status" -ne 0 ]] && { spinner_warn "Required tooling missing"; exit "$status"; }
+spinner_success "Checks complete"

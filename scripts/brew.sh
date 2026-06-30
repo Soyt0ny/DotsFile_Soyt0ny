@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 source "$ROOT_DIR/scripts/os-detect.sh"
 
 CURRENT_OS="$(detect_os)"
@@ -14,42 +14,42 @@ bootstrap_brew() {
 
   # Check if brew is already available in PATH
   if command -v brew >/dev/null 2>&1; then
-    log_success "brew already available: $(command -v brew)"
+    spinner_success "brew already available: $(command -v brew)"
     return 0
   fi
   
   # Check standard linuxbrew location
   if [[ -f "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
-    log_success "brew found in /home/linuxbrew/.linuxbrew/bin/brew"
+    spinner_success "brew found in /home/linuxbrew/.linuxbrew/bin/brew"
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
     return 0
   fi
 
   if [[ "$MODE" == "dry-run" ]]; then
-    log_info "dry-run: brew missing; would bootstrap Homebrew"
-    log_info "dry-run: sudo apt-get update && sudo apt-get install -y build-essential procps curl file git"
-    log_info "dry-run: NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    spinner_info "dry-run: brew missing; would bootstrap Homebrew"
     return 0
   fi
 
   if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-    log_warn "Running as root; skipping brew bootstrap because Homebrew must run as non-root user"
+    spinner_warn "Running as root; skipping brew bootstrap"
     return 1
   fi
 
-  log_info "brew missing; attempting automatic bootstrap for Debian/Ubuntu"
+  spinner_info "Bootstrapping Homebrew for Debian/Ubuntu"
 
-  log_step "Installing Homebrew prerequisites"
-  if ! sudo apt-get update -y && sudo apt-get install -y build-essential procps curl file git; then
-    log_warn "Failed installing brew prerequisites; skipping brew installs"
+  spinner_run "Installing brew prerequisites" bash -c "
+    sudo apt-get update -y && sudo apt-get install -y build-essential procps curl file git
+  " || {
+    spinner_warn "Failed brew prerequisites; skipping brew packages"
     return 1
-  fi
+  }
 
-  log_step "Installing Homebrew"
-  if ! NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
-    log_warn "Failed installing Homebrew; skipping brew installs"
+  spinner_run "Installing Homebrew" bash -c "
+    NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"
+  " || {
+    spinner_warn "Failed Homebrew install; skipping brew packages"
     return 1
-  fi
+  }
 
   if [[ -d /home/linuxbrew/.linuxbrew ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
@@ -58,11 +58,11 @@ bootstrap_brew() {
   fi
 
   if command -v brew >/dev/null 2>&1; then
-    log_success "brew installed successfully: $(command -v brew)"
+    spinner_success "Homebrew installed"
     return 0
   fi
 
-  log_warn "brew bootstrap finished but binary is not in PATH"
+  spinner_warn "brew bootstrap finished but binary not in PATH"
   return 1
 }
 

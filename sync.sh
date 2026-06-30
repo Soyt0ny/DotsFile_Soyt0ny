@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 EXCLUDES_FILE="$ROOT_DIR/scripts/sync-excludes.txt"
 
 MODE="dry-run"
@@ -44,7 +44,7 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      log_error "Unknown option: $arg"
+      spinner_warn "Unknown option: $arg"
       usage
       exit 1
       ;;
@@ -52,7 +52,7 @@ for arg in "$@"; do
 done
 
 if [[ ! -f "$EXCLUDES_FILE" ]]; then
-  log_error "Missing excludes file: $EXCLUDES_FILE"
+  spinner_warn "Missing excludes file: $EXCLUDES_FILE"
   exit 1
 fi
 
@@ -80,11 +80,11 @@ log() {
     tag="${tag#[}"
     local body="${msg#*] }"
     case "$tag" in
-      ok) log_success "$body" ;;
-      warn) log_warn "$body" ;;
-      error) log_error "$body" ;;
-      info) log_info "$body" ;;
-      plan|backup|run|dry-run|skip) log_step "$body" ;;
+      ok) spinner_success "$body" ;;
+      warn) spinner_warn "$body" ;;
+      error) spinner_warn "$body" ;;
+      info) spinner_info "$body" ;;
+      plan|backup|run|dry-run|skip) spinner_step "$body" ;;
       *) printf '%s\n' "$msg" ;;
     esac
     return
@@ -363,7 +363,7 @@ sync_mapping() {
   fi
 }
 
-log_step "Dotfiles sync (machine -> repo)"
+spinner_step "Dotfiles sync (machine -> repo)"
 log "Mode: $MODE"
 log "Prune: $PRUNE"
 log "Verbose: $VERBOSE"

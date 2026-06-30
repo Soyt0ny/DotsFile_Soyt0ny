@@ -1,5 +1,4 @@
 atuin
-bat
 eza
 fastfetch
 fd
@@ -12,5 +11,6 @@ lazygit
 ripgrep
 romkatv/powerlevel10k/powerlevel10k
 zoxide
+zsh-autocomplete
 zsh-autosuggestions
 zsh-syntax-highlighting

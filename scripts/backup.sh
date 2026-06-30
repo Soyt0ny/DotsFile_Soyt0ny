@@ -2,26 +2,19 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 MODE="dry-run"
 AUTO_YES=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --mode)
-      MODE="$2"
-      shift 2
-      ;;
-    -y|--yes)
-      AUTO_YES=true
-      shift
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      exit 1
-      ;;
+    --mode) MODE="$2"; shift 2 ;;
+    -y|--yes) AUTO_YES=true; shift ;;
+    *) spinner_warn "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+[[ "$MODE" == "dry-run" ]] && export DOTS_DRY_RUN=true
 
 timestamp="$(date +%Y%m%d-%H%M%S)"
 backup_root="$HOME/.dotfiles-backup/$timestamp"
@@ -39,40 +32,28 @@ declare -a mappings=(
   "$ROOT_DIR/configs/vscode/settings.json|$HOME/.config/Code/User/settings.json"
 )
 
+backup_count=0
+
 backup_target() {
   local target="$1"
-  local target_abs
-  target_abs="$(readlink -f "$target" 2>/dev/null || printf '%s' "$target")"
-
   if [[ ! -e "$target" && ! -L "$target" ]]; then
-    log_step "No existing target: $target"
     return
   fi
 
-  local relative
-  relative="${target#$HOME/}"
-  if [[ "$target" == "$HOME" ]]; then
-    relative="home-root"
-  elif [[ "$target" == "$HOME"/* ]]; then
-    :
-  else
-    relative="external/$(basename "$target")"
-  fi
-
+  local relative="${target#$HOME/}"
   local dest="$backup_root/$relative"
 
   if [[ "$MODE" == "dry-run" ]]; then
-    log_info "dry-run: backup $target_abs -> $dest"
+    spinner_info "would backup: $target -> $dest"
     return
   fi
 
   mkdir -p "$(dirname "$dest")"
-  cp -a "$target" "$dest"
-  log_success "backed up $target_abs -> $dest"
+  cp -a "$target" "$dest" && ((backup_count++))
 }
 
-log_step "Backup phase ($MODE)"
-log_info "Auto-confirm: $AUTO_YES"
+spinner_step "Backup phase"
+
 if [[ "$MODE" == "apply" ]]; then
   mkdir -p "$backup_root"
 fi
@@ -81,3 +62,11 @@ for item in "${mappings[@]}"; do
   target="${item#*|}"
   backup_target "$target"
 done
+
+if [[ "$MODE" == "apply" && $backup_count -gt 0 ]]; then
+  spinner_success "Backed up $backup_count configs to $backup_root"
+elif [[ "$MODE" == "dry-run" ]]; then
+  spinner_info "Dry-run complete"
+else
+  spinner_info "Nothing to back up"
+fi
