@@ -4,7 +4,7 @@ dust
 composer
 php
 docker.io
-docker-compose-plugin
+docker-compose-v2
 proton-vpn-cli
 bat
 btop

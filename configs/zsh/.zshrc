@@ -9,8 +9,6 @@ if [ -d "/home/linuxbrew/.linuxbrew" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-export ZSH="$HOME/.oh-my-zsh"
-
 # Detect Termux
 IS_TERMUX=0
 if [[ -n "$TERMUX_VERSION" ]] || [[ -d "/data/data/com.termux" ]]; then
@@ -94,7 +92,9 @@ plugins=(
   command-not-found
 )
 
-source $ZSH/oh-my-zsh.sh
+# Oh My Zsh no se usa en este setup (es opcional y no viene preinstalado).
+# Comentar el source si no tenés OMZ instalado.
+# source $ZSH/oh-my-zsh.sh
 
 eval "$(fzf --zsh)"
 eval "$(zoxide init zsh)"
