@@ -2,8 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$ROOT_DIR/scripts/logging.sh"
+source "$ROOT_DIR/scripts/spinner.sh"
 source "$ROOT_DIR/scripts/os-detect.sh"
+source "$ROOT_DIR/scripts/state.sh"
+
+# Keep sudo timestamp alive (silent if no terminal)
+sudo -v 2>/dev/null || true
 
 MODE="apply"
 ONLY_MODULE=""
@@ -11,77 +15,57 @@ SKIP_CSV=""
 AUTO_YES=false
 INTERACTIVE=false
 SKIP_CONFLICT_CHECK=false
-ENABLE_LOG=false
 UPDATE_MODE=false
 
-declare -a ALL_MODULES=(
-  "devtools"
-  "project"
-  "ai-clis"
-  "system"
-)
-
+declare -a ALL_MODULES=("devtools" "project" "ai-clis" "system")
 declare -a SELECTED_MODULES=()
 
-# Invocacion pelada (sin flags) => ofrecer menu interactivo con gum.
-USE_MENU=false
-if [[ $# -eq 0 ]]; then
-  USE_MENU=true
-fi
+# No args => install everything (non-interactive)
+[[ $# -eq 0 ]] && AUTO_YES=true
 
 usage() {
   cat <<'EOF'
-Uso:
-  ./setup.sh                Menu interactivo (gum) para elegir lenguajes y extras
-  ./setup.sh --all          Instala todo sin menu
-  ./setup.sh --dry-run
-  ./setup.sh --yes
-  ./setup.sh --interactive
-  ./setup.sh --only ai-clis
-  ./setup.sh --skip ai-clis,project
 
-Flags:
-  --all                     Ejecuta todos los modulos (default)
-  --only <module>           Ejecuta solo un modulo
-  --skip <m1,m2>            Omite modulos
-  --dry-run                 Muestra acciones sin aplicar cambios
-  -y, --yes                 Modo no interactivo (auto-confirmaciones)
-  --interactive             Pregunta por cada modulo antes de ejecutar
-  --log                     Guarda log completo en ~/.dotfiles-logs/
-  --update                  Modo actualizacion (sin backups, incremental)
-  --skip-conflict-check     Omite deteccion de conflictos
-  -h, --help                Muestra ayuda
+  DotsFile_Soyt0ny — Portable Linux dotfiles setup
 
-Modulos disponibles:
-  devtools, project, ai-clis, system
+  Usage:
+    ./setup.sh                Interactive menu (gum) to pick modules
+    ./setup.sh --all          Install everything (no menu)
+    ./setup.sh --dry-run      Preview only, no changes
+    ./setup.sh --yes          Non-interactive auto-confirm
+    ./setup.sh --update       Update mode (incremental, no backups)
+
+  Modules:  devtools  project  ai-clis  system
+
+  Flags:
+    --only <module>           Run a single module
+    --skip <m1,m2>            Skip modules (comma-separated)
+    --dry-run                 Preview actions
+    -y, --yes                 Auto-confirm all prompts
+    --update                  Incremental update (skip backups)
+    --skip-conflict-check     Skip conflict detection
+    -h, --help                Show this help
+
 EOF
 }
 
 is_valid_module() {
   local wanted="$1"
-  local module
   for module in "${ALL_MODULES[@]}"; do
-    if [[ "$module" == "$wanted" ]]; then
-      return 0
-    fi
+    [[ "$module" == "$wanted" ]] && return 0
   done
   return 1
 }
 
 module_in_list() {
-  local wanted="$1"
-  shift
-  local module
+  local wanted="$1"; shift
   for module in "$@"; do
-    if [[ "$module" == "$wanted" ]]; then
-      return 0
-    fi
+    [[ "$module" == "$wanted" ]] && return 0
   done
   return 1
 }
 
 resolve_modules() {
-  local module
   local -a base_modules=()
   local -a skip_modules=()
 
@@ -96,211 +80,111 @@ resolve_modules() {
     for module in "${raw_skips[@]}"; do
       module="${module//[[:space:]]/}"
       [[ -z "$module" ]] && continue
-      if ! is_valid_module "$module"; then
-        log_error "Modulo desconocido en --skip: $module"
-        exit 1
-      fi
+      is_valid_module "$module" || { spinner_warn "Unknown module: $module"; exit 1; }
       skip_modules+=("$module")
     done
   fi
 
   SELECTED_MODULES=()
   for module in "${base_modules[@]}"; do
-    if module_in_list "$module" "${skip_modules[@]}"; then
-      continue
-    fi
+    module_in_list "$module" "${skip_modules[@]}" && continue
     SELECTED_MODULES+=("$module")
   done
 
-  if ((${#SELECTED_MODULES[@]} == 0)); then
-    log_error "No quedaron modulos para ejecutar"
-    exit 1
-  fi
+  ((${#SELECTED_MODULES[@]} > 0)) || { spinner_warn "No modules to run"; exit 1; }
 }
+
+# ─── Parse arguments ─────────────────────────────────────────────────
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --all)
-      ONLY_MODULE=""
-      shift
-      ;;
-    --only)
-      ONLY_MODULE="$2"
-      if ! is_valid_module "$ONLY_MODULE"; then
-        log_error "Modulo desconocido en --only: $ONLY_MODULE"
-        exit 1
-      fi
-      shift 2
-      ;;
-    --skip)
-      SKIP_CSV="$2"
-      shift 2
-      ;;
-    --dry-run)
-      MODE="dry-run"
-      shift
-      ;;
-    -y|--yes)
-      AUTO_YES=true
-      shift
-      ;;
-    --interactive)
-      INTERACTIVE=true
-      shift
-      ;;
-    --log)
-      ENABLE_LOG=true
-      shift
-      ;;
-    --update)
-      UPDATE_MODE=true
-      shift
-      ;;
-    --skip-conflict-check)
-      SKIP_CONFLICT_CHECK=true
-      shift
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      log_error "Opcion desconocida: $1"
-      usage
-      exit 1
-      ;;
+    --all)                ONLY_MODULE=""; shift ;;
+    --only)               ONLY_MODULE="$2"; shift 2 ;;
+    --skip)               SKIP_CSV="$2"; shift 2 ;;
+    --dry-run)            MODE="dry-run"; shift ;;
+    -y|--yes)             AUTO_YES=true; shift ;;
+    --interactive)        INTERACTIVE=true; shift ;;
+    --update)             UPDATE_MODE=true; shift ;;
+    --skip-conflict-check) SKIP_CONFLICT_CHECK=true; shift ;;
+    -h|--help)            usage; exit 0 ;;
+    *)                    spinner_warn "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
 
+if [[ "$MODE" == "dry-run" ]]; then
+  export DOTS_DRY_RUN=true
+fi
+
 resolve_modules
 
-# Setup logging if requested
-LOG_FILE=""
-if [[ "$ENABLE_LOG" == true ]]; then
-  LOG_DIR="$HOME/.dotfiles-logs"
-  mkdir -p "$LOG_DIR"
-  LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
-  log_info "Guardando log en: $LOG_FILE"
-  exec > >(tee -a "$LOG_FILE") 2>&1
-fi
+# ─── Banner ────────────────────────────────────────────────────────────
 
-# Pre-instalacion checks (solo en primera instalacion, no en update)
-if [[ "$UPDATE_MODE" != true ]]; then
-  if [[ ! -x "$ROOT_DIR/scripts/check-requirements.sh" ]]; then
-    log_error "Script faltante: scripts/check-requirements.sh"
-    exit 1
-  fi
-  
-  if ! "$ROOT_DIR/scripts/check-requirements.sh"; then
-    log_error "Faltan requisitos previos - abortar setup"
-    exit 1
-  fi
-  
-  if [[ "$SKIP_CONFLICT_CHECK" != true ]]; then
-    if [[ ! -x "$ROOT_DIR/scripts/detect-conflicts.sh" ]]; then
-      log_error "Script faltante: scripts/detect-conflicts.sh"
-      exit 1
-    fi
-    
-    if [[ "$AUTO_YES" == true ]]; then
-      if ! "$ROOT_DIR/scripts/detect-conflicts.sh" --yes; then
-        log_error "Deteccion de conflictos fallo o fue cancelada"
-        exit 1
-      fi
-    else
-      if ! "$ROOT_DIR/scripts/detect-conflicts.sh"; then
-        log_error "Deteccion de conflictos fallo o fue cancelada"
-        exit 1
-      fi
-    fi
-  fi
-fi
+clear 2>/dev/null || true
+printf '\n'
+printf '  \033[1;36m╔══════════════════════════════════╗\033[0m\n'
+printf '  \033[1;36m║\033[0m     \033[1mDotsFile Soyt0ny\033[0m             \033[1;36m║\033[0m\n'
+printf '  \033[1;36m║\033[0m     \033[2mPortable Linux Setup\033[0m         \033[1;36m║\033[0m\n'
+printf '  \033[1;36m╚══════════════════════════════════╝\033[0m\n'
+printf '\n'
 
-# Menu interactivo (gum) en invocacion pelada
-if [[ "$USE_MENU" == true && -t 0 ]]; then
-  # gum es necesario para el menu. En una maquina nueva puede no estar todavia,
-  # asi que lo instalamos antes (en Arch viene del repo extra; en Debian via apt
-  # si el repo de Charm esta configurado, si no se omite el menu).
-  if ! command -v gum >/dev/null 2>&1 && [[ "$MODE" == "apply" ]]; then
-    log_info "Instalando gum para el menu interactivo..."
-    sys_install gum || log_warn "No se pudo instalar gum automaticamente"
-  fi
+spinner_info "OS: $(detect_os)"
+spinner_info "Mode: $MODE"
+[[ "$UPDATE_MODE" == true ]] && spinner_info "Update: incremental (no backups)"
 
-  if command -v gum >/dev/null 2>&1; then
-    menu_tmp="$(mktemp)"
-    if "$ROOT_DIR/scripts/interactive-menu.sh" --out "$menu_tmp"; then
-      # shellcheck disable=SC1090
-      source "$menu_tmp"
-      rm -f "$menu_tmp"
-      IFS=',' read -r -a SELECTED_MODULES <<<"${MODULES:-}"
-      if [[ -n "${DEVTOOLS_LAYERS:-}" ]]; then
-        export DOTS_DEVTOOLS_LAYERS="$DEVTOOLS_LAYERS"
-      fi
-      if ((${#SELECTED_MODULES[@]} == 0)); then
-        log_error "El menu no devolvio modulos; abortando"
-        exit 1
-      fi
-    else
-      rm -f "$menu_tmp"
-      log_warn "Menu cancelado; usando seleccion por defecto (todo)"
-    fi
-  else
-    log_info "gum no disponible; instalando todo por defecto (sin menu)"
-  fi
-fi
+# ─── Interactive mode ──────────────────────────────────────────────────
 
-# Interactive module selection
 if [[ "$INTERACTIVE" == true ]]; then
-  log_step "Modo interactivo"
   declare -a interactive_selected=()
-  
   for module in "${SELECTED_MODULES[@]}"; do
     printf '\n'
-    read -rp "¿Instalar modulo '$module'? (Y/n): " response
-    response=${response:-Y}
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-      interactive_selected+=("$module")
-    else
-      log_info "Omitiendo modulo: $module"
-    fi
+    read -rp "  Install module '$module'? (Y/n): " response
+    [[ "${response:-Y}" =~ ^[Yy]$ ]] && interactive_selected+=("$module") || spinner_info "Skipping: $module"
   done
-  
   SELECTED_MODULES=("${interactive_selected[@]}")
-  
-  if ((${#SELECTED_MODULES[@]} == 0)); then
-    log_error "No se seleccionaron modulos para ejecutar"
+  ((${#SELECTED_MODULES[@]} > 0)) || { spinner_warn "No modules selected"; exit 1; }
+fi
+
+# ─── Pre-flight checks ─────────────────────────────────────────────────
+
+if [[ "$UPDATE_MODE" != true ]]; then
+  spinner_step "Pre-flight checks"
+
+  if [[ ! -x "$ROOT_DIR/scripts/check-requirements.sh" ]]; then
+    spinner_warn "Missing: scripts/check-requirements.sh"
     exit 1
+  fi
+
+  "$ROOT_DIR/scripts/check-requirements.sh" || {
+    spinner_warn "Requirements not met — aborting"; exit 1;
+  }
+
+  if [[ "$SKIP_CONFLICT_CHECK" != true ]]; then
+    [[ -x "$ROOT_DIR/scripts/detect-conflicts.sh" ]] || { spinner_warn "Missing: scripts/detect-conflicts.sh"; exit 1; }
+    if [[ "$AUTO_YES" == true ]]; then
+      "$ROOT_DIR/scripts/detect-conflicts.sh" --yes || { spinner_warn "Conflict check failed"; exit 1; }
+    else
+      "$ROOT_DIR/scripts/detect-conflicts.sh" || { spinner_warn "Conflict check failed"; exit 1; }
+    fi
   fi
 fi
 
-log_step "threeDotsFiles setup"
-log_info "Mode: $MODE"
-log_info "Modules: ${SELECTED_MODULES[*]}"
-log_info "Auto-confirm: $AUTO_YES"
-log_info "Interactive: $INTERACTIVE"
-log_info "Update mode: $UPDATE_MODE"
-log_info "Logging: $ENABLE_LOG"
+# ─── Run modules ───────────────────────────────────────────────────────
+
+spinner_step "Setup — ${SELECTED_MODULES[*]}"
 
 run_module() {
   local module="$1"
   local script="$ROOT_DIR/scripts/setup/${module}.sh"
 
-  if [[ ! -x "$script" ]]; then
-    log_error "Modulo no ejecutable o faltante: $script"
-    exit 1
-  fi
+  [[ -x "$script" ]] || { spinner_warn "Module not found: $module"; exit 1; }
 
   printf '\n'
-  log_step "Module: $module"
+  spinner_step "${module^}"
 
   local extra_flags=()
-  if [[ "$AUTO_YES" == true ]]; then
-    extra_flags+=(--yes)
-  fi
-  if [[ "$UPDATE_MODE" == true ]]; then
-    extra_flags+=(--skip-backup)
-  fi
-  
+  [[ "$AUTO_YES" == true ]] && extra_flags+=(--yes)
+  [[ "$UPDATE_MODE" == true ]] && extra_flags+=(--skip-backup)
+
   "$script" --mode "$MODE" "${extra_flags[@]}"
 }
 
@@ -308,24 +192,26 @@ for module in "${SELECTED_MODULES[@]}"; do
   run_module "$module"
 done
 
-printf '\n'
-log_success "Setup completo finalizado."
-
-if [[ "$ENABLE_LOG" == true && -n "$LOG_FILE" ]]; then
-  printf '\n'
-  log_info "Log guardado en: $LOG_FILE"
-fi
+# ─── Persist state ────────────────────────────────────────────────────
 
 if [[ "$MODE" == "apply" ]]; then
+  state_write "${SELECTED_MODULES[@]}"
+fi
+
+# ─── Summary ───────────────────────────────────────────────────────────
+
+printf '\n'
+printf '  \033[1;32m✔ Setup complete\033[0m\n'
+printf '\n'
+
+if [[ "$MODE" == "apply" ]]; then
+  printf '  \033[1mState:\033[0m\n'
+  state_summary 2>/dev/null || true
   printf '\n'
-  log_step "Proximos pasos"
-  cat <<'CHECKLIST'
-  [ ] Configurar git user: git config --global user.name "Tu Nombre"
-  [ ] Configurar git email: git config --global user.email "tu@email.com"
-  [ ] Reiniciar terminal para aplicar zsh/PATH: exec zsh
-  [ ] Verificar instalacion: ./scripts/verify-setup.sh
-  [ ] (Opcional) Autenticar gh-cli: gh auth login
-  [ ] (Opcional) Autenticar CLIs de IA segun necesites
-  [ ] (Opcional) Instalar terminal Ghostty manualmente (no soportado nativamente en Linux por Homebrew)
-CHECKLIST
+  printf '  \033[1mNext steps:\033[0m\n'
+  printf '  \033[2m▸\033[0m git config --global user.name "Your Name"\n'
+  printf '  \033[2m▸\033[0m git config --global user.email "you@email.com"\n'
+  printf '  \033[2m▸\033[0m exec zsh\n'
+  printf '  \033[2m▸\033[0m gh auth login  (optional)\n'
+  printf '\n'
 fi
