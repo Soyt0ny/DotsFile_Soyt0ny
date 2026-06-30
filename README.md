@@ -1,199 +1,227 @@
-# DotsFile_Soyt0ny
+# DotsFile Soyt0ny
 
-**[ OS: Arch Linux & Debian/Ubuntu/Parrot ] [ Shell: Zsh ] [ Terminal-Focused ]**
+**[ Arch Linux · Debian/Ubuntu/Parrot ] [ Zsh ] [ Terminal-Focused ]**
 
-A portable, modular, and automated bootstrap setup for Linux machines. It seamlessly detects your operating system, installs modern CLI tools, configures your terminal environment, and manages dotfiles through symlinks.
+One command to set up your entire Linux terminal environment. Auto-detects your OS, installs modern CLI tools, configures your shell, and symlinks your dotfiles.
 
----
-
-## 📋 What's Included
-
-This setup automates the complete onboarding of a new machine across different Linux families. 
-
-### Core Tools & CLI Replacements
-* **Modern Utilities**: `bat` (cat), `eza` (ls), `fzf` (find), `ripgrep` (grep)
-* **Navigation & History**: `atuin` (shell history), `zoxide` (smart cd)
-* **TUIs**: `lazygit`, `lazydocker`
-* **System Monitoring**: `btop`, `fastfetch`
-* **Dev Tools**: `github-cli`, `nano` (default `$EDITOR`)
-* **Editor**: VS Code (`visual-studio-code-bin` on Arch / Microsoft repo on Debian)
-
-### Languages (optional, selectable in the interactive menu)
-* **Python**: `python`, `pip`, `pyenv`
-* **C / C++**: `gcc`, `gdb`, `make`, `cmake`, `valgrind`
-* **PHP**: `php`, `composer`
-* **Node.js**: `nvm` + `pnpm` + `bun`
-
-### Versioned Configurations
-* **Shell**: `.zshrc` + `.p10k.zsh` (Powerlevel10k prompt)
-* **Multiplexer**: `.tmux.conf`
-* **Terminal**: `kitty/` (Kanagawa theme, blur, transparency) + `ghostty/`
-* **Tools**: `atuin/`, `btop/`, `fastfetch/`, VS Code `settings.json`
-* **Git**: `.gitconfig` (Aliases, delta, behavior - *no credentials included*)
-
-### Optional Add-ons
-* **AI CLIs**: Claude Code, Antigravity CLI (`agy`), OpenCode, GitHub Copilot, Codex
-
-### Interactive Install
-Running `./setup.sh` with no flags launches a **`gum`-based menu** to pick which
-languages and extras to install (the core CLI/shell/git/editor always installs).
-Use `./setup.sh --all` to install everything without the menu.
-
----
-
-## ⚙️ Prerequisites
-
-Before running the setup, ensure your system meets these minimum requirements:
-1. **Arch Linux** (Manjaro, EndeavourOS) OR **Debian-based** (Ubuntu, Parrot OS).
-2. **git** installed (`sudo pacman -S git` or `sudo apt install git`).
-3. Standard user account with **sudo** privileges (Do *not* run as root).
-
----
-
-## 🚀 Installation
-
-The installation process is designed to be fully automated and safe. It will automatically backup any existing configurations before creating new symlinks.
-
-### Easy Install (Recommended)
-Run this single command in your terminal. It will install `git`, detect your OS, clone the repo, and start the setup automatically:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Soyt0ny/DotsFile_Soyt0ny/main/bootstrap.sh)"
 ```
 
-### Manual Install
-If you prefer to do it manually:
+---
 
-**1. Install Git:**
-*On Arch:* `sudo pacman -S git base-devel curl`
-*On Debian/Ubuntu:* `sudo apt update && sudo apt install git build-essential curl`
+## Quick Start
 
-**2. Clone the repository:**
+### One-liner (recommended)
+
 ```bash
-git clone https://github.com/Soyt0ny/DotsFile_Soyt0ny.git
-cd DotsFile_Soyt0ny
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Soyt0ny/DotsFile_Soyt0ny/main/bootstrap.sh)"
 ```
 
-**3. Run the Setup:**
-Run the setup script. It will check requirements, detect conflicts, and install everything.
+This installs `git`, clones the repo, and runs the full installer.
+
+### Manual
+
 ```bash
+# 1. Clone
+git clone https://github.com/Soyt0ny/DotsFile_Soyt0ny.git ~/DotsFile_Soyt0ny
+cd ~/DotsFile_Soyt0ny
+
+# 2. Install everything
 ./setup.sh --yes
-```
-*(Note: To see what the script will do without making any changes, run `./setup.sh --dry-run` first).*
 
-**4. Reload Your Environment:**
-```bash
+# 3. Reload
 exec zsh
 ```
 
 ---
 
-## 🔧 Post-Installation Checklist
+## Usage
 
-After the setup finishes, complete these manual steps to personalize your environment:
+```bash
+./setup.sh --yes          # full install, no prompts
+./setup.sh                # same as --yes (installs everything)
+./setup.sh --dry-run      # preview only, no changes
+./setup.sh --update --yes # incremental update (skip backups, only missing packages)
+./scripts/uninstall.sh    # remove dotfiles
+```
 
-1. **Configure Git Identity**
-   ```bash
-   git config --global user.name "Your Name"
-   git config --global user.email "your.email@example.com"
-   ```
-2. **Verify the Installation**
-   ```bash
-   ./scripts/verify-setup.sh
-   ```
-3. **Authenticate Services (Optional)**
-   ```bash
-   gh auth login
-   ```
+### Setup flags
+
+| Flag | Description |
+|------|-------------|
+| *(no flags)* | Install everything (non-interactive) |
+| `--yes`, `-y` | Install all modules, non-interactive |
+| `--dry-run` | Preview everything without making changes |
+| `--update` | Incremental update (skip backups, only missing packages) |
+| `--only <module>` | Run a single module |
+| `--skip <m1,m2>` | Skip modules |
+| `--skip-conflict-check` | Skip conflict detection |
+| `-h`, `--help` | Show help |
+
+### Modules
+
+| Module | What it does |
+|--------|-------------|
+| `devtools` | System packages + language toolchains (gcc, python, php) |
+| `project` | Backs up existing configs, symlinks dotfiles from this repo |
+| `ai-clis` | Installs AI CLI tools (claude, opencode, copilot, codex, agy) |
+| `system` | Post-setup: enables Docker, sets zsh as default shell |
+
+### Examples
+
+```bash
+./setup.sh --yes                  # full install, no prompts
+./setup.sh --dry-run              # preview only
+./setup.sh --update --yes         # update existing install
+./setup.sh --only ai-clis --yes   # install only AI CLIs
+./setup.sh --skip ai-clis,system  # skip modules
+```
 
 ---
 
-## 🔄 Updating an Existing Setup
+## What gets installed
 
-If you pull new changes from this repository, you can safely update your system without running the full installation again.
+### Core (always)
+| Tool | Replaces | OS |
+|------|----------|----|
+| `bat` | `cat` | apt / pacman |
+| `eza` | `ls` | brew / pacman |
+| `fzf` | find | brew / pacman |
+| `ripgrep` | grep | brew / pacman |
+| `fd` | find | brew / pacman |
+| `zoxide` | cd | brew / pacman |
+| `atuin` | shell history | brew / pacman |
+| `btop` | top/htop | apt / pacman |
+| `fastfetch` | neofetch | brew / pacman |
+| `git-delta` | git diff | brew / pacman |
+
+### Dev tools
+- **Git**: `lazygit`, `github-cli`
+- **Docker**: `docker`, `docker-compose`, `lazydocker`
+- **Shell**: `zsh` + `powerlevel10k` + plugins (autocomplete, syntax-highlighting, autosuggestions)
+- **Editor**: VS Code + `nano` (default `$EDITOR`)
+- **Terminal**: `kitty` (Kanagawa theme)
+
+### Languages
+- **Python**: `python`, `pip`, `pyenv`
+- **C/C++**: `gcc`, `gdb`, `cmake`, `valgrind`
+- **PHP**: `php`, `composer`
+- **Node.js**: `nvm` + `pnpm` + `bun`
+
+### AI CLIs
+`claude` · `opencode` · `copilot` · `codex` · `agy`
+
+### Dotfiles managed
+- `~/.zshrc` — Zsh config (Powerlevel10k, aliases, plugins)
+- `~/.p10k.zsh` — Prompt theme
+- `~/.tmux.conf` — Tmux multiplexer
+- `~/.config/kitty/` — Kitty terminal
+- `~/.config/ghostty/` — Ghostty terminal
+- `~/.config/git/config` — Git aliases + delta
+- `~/.config/atuin/` — Shell history
+- `~/.config/btop/` — System monitor
+- `~/.config/fastfetch/` — System info
+- `~/.config/Code/User/settings.json` — VS Code
+
+---
+
+## Updating
+
+When the repo has new changes, update without reinstalling everything:
 
 ```bash
 cd ~/DotsFile_Soyt0ny
 git pull origin main
 ./setup.sh --update --yes
 ```
-**The `--update` flag will:**
-* Skip the backup phase (assumes backups exist).
-* Only install *missing* packages incrementally.
-* Re-apply all dotfile symlinks with the latest versions.
+
+The `--update` flag:
+- Skips backups (your configs are already backed up)
+- Only installs **missing** packages (incremental)
+- Re-applies dotfile symlinks with latest versions
 
 ---
 
-## 🗑️ Uninstallation & Rollback
+## How it works
 
-Tried it and want your old setup back? The uninstaller will safely remove the symlinks and restore your original backed-up configurations.
+### Progress output
+All package manager output (`apt`, `pacman`, `brew`) is hidden behind a **spinner**. You only see:
+
+```
+⠋ Installing 23 system packages (git docker zsh bat kitty +18 more)
+✔ Installed 23 system packages (45s)
+```
+
+If something fails, the last 30 lines of the log are shown. Full logs live in `~/.dotfiles-logs/`.
+
+### Install state
+The setup tracks what you installed in `~/.config/dotsfile/state.json`. Future runs know what's already there.
+
+### Architecture
+```
+bootstrap.sh     → one-liner entry point (installs git, clones repo, runs setup)
+setup.sh         → main orchestrator (pre-flight checks, modules)
+install.sh       → layer-based package + dotfile installer
+scripts/
+  spinner.sh     → progress indicators + output hiding
+  state.sh       → install state persistence
+  packages.sh    → OS-aware package manager (pacman/apt/brew)
+  link.sh        → symlink dotfiles
+  backup.sh      → backup existing configs
+  os-detect.sh   → detect Arch vs Debian
+  check-requirements.sh → pre-flight validation
+  detect-conflicts.sh   → conflict detection
+  uninstall.sh          → remove symlinks + restore backups
+packages/
+  layers/        → per-OS package manifests
+  profiles/      → install profiles
+configs/         → dotfile templates
+```
+
+---
+
+## Uninstall
+
+Removes symlinks and restores your original configs (does NOT uninstall system packages):
 
 ```bash
 ./scripts/uninstall.sh
 ```
-*Important: The uninstaller does NOT remove system packages installed via pacman/yay/brew/apt to prevent breaking dependencies. Packages must be removed manually if desired.*
 
 ---
 
-## 🛠️ Advanced Usage & Flags
+## Syncing configs back to the repo
 
-The `setup.sh` script is modular and accepts several flags to customize its behavior.
+If you modify your local dotfiles and want to push changes back:
 
-### Execution Modes
-| Flag | Description |
-|------|-------------|
-| `--dry-run` | Shows actions without applying any changes. |
-| `-y, --yes` | Non-interactive mode (auto-confirms prompts). |
-| `--interactive` | Asks for confirmation before running each module. |
-| `--log` | Saves a complete installation log in `~/.dotfiles-logs/`. |
-
-### Module Selection
-By default, all modules are executed. You can isolate specific layers:
-| Flag | Description |
-|------|-------------|
-| `--only <module>` | Runs a specific module (e.g., `./setup.sh --only ai-clis`). |
-| `--skip <m1,m2>` | Skips specific modules (e.g., `./setup.sh --skip ai-clis`). |
-
-### Available Modules
-* `system`: OS requirements and post-setup tasks (like Docker).
-* `devtools`: Base toolchains and core CLI packages (handles pacman/yay or apt/brew).
-* `project`: Backups existing configs and links the repo's dotfiles.
-* `ai-clis`: Installs AI CLI tools (without authentication).
-
----
-
-## 🧪 Testing & Validation
-
-The repository includes a suite of tests to ensure everything works as expected. 
-
-To run the automated tests:
 ```bash
-./tests/run-all.sh
+./sync.sh --dry-run    # preview
+./sync.sh --apply      # apply
 ```
 
+Sync direction: **machine → repo**.
+
 ---
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
-**1. The setup fails at `check-requirements.sh`**
-*   **Unsupported OS**: This setup requires an Arch-based or Debian-based distribution.
-*   **No Internet**: Check your connection (`ping 8.8.8.8`).
-*   **Running as Root**: Run the script as a normal user with `sudo` configured.
+**Setup fails at requirements check**
+- Unsupported OS? Needs Arch or Debian/Ubuntu.
+- No internet? Check `ping 8.8.8.8`.
+- Running as root? Run as normal user with `sudo`.
 
-**2. The setup detects conflicts**
-If the script finds existing managers (like Oh My Zsh) or hard files where symlinks should go, it will pause. You can force it to ignore conflicts:
-```bash
-./setup.sh --skip-conflict-check
-```
+**Homebrew fails on Debian**
+If brew can't create its sandbox, run `./setup.sh --update` — it retries with the fixes from the latest repo version.
 
-**3. Tmux colors look broken / No TrueColor**
-Tmux caches previous instances. If you update the configuration and colors look wrong, kill the server:
+**Tmux colors look broken**
+Tmux caches old sessions. Kill the server:
 ```bash
 tmux kill-server
 ```
 
-**4. I need to see what went wrong**
-Run the setup with the log flag and inspect the output:
+**Need to see raw logs**
 ```bash
-./setup.sh --log
+ls ~/.dotfiles-logs/
 cat ~/.dotfiles-logs/setup-*.log
 ```
